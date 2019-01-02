@@ -38,6 +38,7 @@ func main() {
 	rootCmd.PersistentFlags().BoolVar(&timestamps, "timestamps", false, "Enable timestamps in output")
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Show less output")
 	addHelpFlag(rootCmd, "pack")
+	// TODO: put in same order as functions in file
 	for _, f := range []func() *cobra.Command{
 		buildCommand,
 		runCommand,
@@ -49,6 +50,8 @@ func main() {
 		showStacksCommand,
 		setDefaultStackCommand,
 		setDefaultBuilderCommand,
+		configureBuilderCommand,
+		inspectBuilderCommand,
 		versionCommand,
 	} {
 		rootCmd.AddCommand(f())
@@ -266,6 +269,7 @@ func setDefaultStackCommand() *cobra.Command {
 	return cmd
 }
 
+// TODO move down out of stack things
 func setDefaultBuilderCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set-default-builder <builder-name>",
@@ -370,6 +374,37 @@ func showStacksCommand() *cobra.Command {
 		}),
 	}
 	addHelpFlag(cmd, "stacks")
+	return cmd
+}
+
+func configureBuilderCommand() *cobra.Command {
+	var runImages []string
+
+	cmd := &cobra.Command{
+		Use:   "configure-builder <builder-image-name> --run-image <run-image-name>",
+		Short: "Override a builder's default run images with one or more overrides",
+		Args:  cobra.ExactArgs(1),
+		RunE: logError(func(cmd *cobra.Command, args []string) error {
+			logger.Info("%v (%d)", runImages, len(runImages))
+			return nil
+		}),
+	}
+	cmd.Flags().StringSliceVarP(&runImages, "run-image", "r", nil, "Overriding run image"+multiValueHelp("run image"))
+	cmd.MarkFlagRequired("run-image")
+	addHelpFlag(cmd, "configure-builder")
+	return cmd
+}
+
+func inspectBuilderCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "inspect-builder <builder-image-name>",
+		Short: "Show a builder's default run images and any run image overrides",
+		Args:  cobra.ExactArgs(1),
+		RunE: logError(func(cmd *cobra.Command, args []string) error {
+			return nil
+		}),
+	}
+	addHelpFlag(cmd, "inspect-builder")
 	return cmd
 }
 
