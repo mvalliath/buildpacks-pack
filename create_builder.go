@@ -3,20 +3,20 @@ package pack
 import (
 	"compress/gzip"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
+	"github.com/BurntSushi/toml"
+	"github.com/buildpack/lifecycle"
+	"github.com/buildpack/lifecycle/image"
 	"github.com/buildpack/pack/logging"
 	"github.com/buildpack/pack/style"
+	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
-
-	"github.com/BurntSushi/toml"
-	"github.com/buildpack/lifecycle"
-	"github.com/buildpack/lifecycle/image"
-	"github.com/pkg/errors"
 
 	"github.com/buildpack/pack/config"
 )
@@ -31,6 +31,7 @@ type BuilderConfig struct {
 	Groups     []lifecycle.BuildpackGroup
 	Repo       image.Image
 	BuilderDir string //original location of builder.toml, used for interpreting relative paths in buildpack URIs
+	StackID    string
 }
 
 type BuilderFactory struct {
@@ -55,6 +56,8 @@ func (f *BuilderFactory) BuilderConfigFromFlags(flags CreateBuilderFlags) (Build
 	}
 
 	builderConfig := BuilderConfig{}
+	builderConfig.StackID = flags.StackID
+
 	builderConfig.BuilderDir = filepath.Dir(flags.BuilderTomlPath)
 	if flags.Publish {
 		builderConfig.Repo, err = f.ImageFactory.NewRemote(baseImage)
@@ -80,6 +83,7 @@ func (f *BuilderFactory) BuilderConfigFromFlags(flags CreateBuilderFlags) (Build
 		}
 		builderConfig.Buildpacks = append(builderConfig.Buildpacks, bp)
 	}
+
 	return builderConfig, nil
 }
 
@@ -170,6 +174,14 @@ func (f *BuilderFactory) baseImageName(stackID, repoName string) (string, error)
 	return stack.BuildImage, nil
 }
 
+func (f *BuilderFactory) runImageNames(stackID string) ([]string, error) {
+	stack, err := f.Config.Get(stackID)
+	if err != nil {
+		return nil, err
+	}
+	return stack.RunImages, nil
+}
+
 func (f *BuilderFactory) Create(config BuilderConfig) error {
 	tmpDir, err := ioutil.TempDir("", "create-builder") // TODO
 	if err != nil {
@@ -200,6 +212,14 @@ func (f *BuilderFactory) Create(config BuilderConfig) error {
 	if err := config.Repo.AddLayer(tarFile); err != nil {
 		return fmt.Errorf(`failed append latest link layer to image: %s`, err)
 	}
+
+	runImages, err := f.runImageNames(config.StackID)
+	jsonBytes, err := json.Marshal(&BuilderImageMetadata{RunImages: runImages})
+	if err != nil {
+		return fmt.Errorf(`failed marshal builder image metadata: %s`, err)
+	}
+
+	config.Repo.SetLabel(MetadataLabel, string(jsonBytes))
 
 	if _, err := config.Repo.Save(); err != nil {
 		return err

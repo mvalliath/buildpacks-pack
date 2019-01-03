@@ -543,44 +543,6 @@ func testPack(t *testing.T, when spec.G, it spec.S) {
 		})
 	}, spec.Parallel(), spec.Report(report.Terminal{}))
 
-	when("pack configure-builder", func() {
-		it.Before(func() {
-			_, err := h.RunE(packCmd(
-				"add-stack", "my.custom.stack",
-				"--build-image", "busybox",
-				"--run-image", "my-org/default-run1",
-				"--run-image", "my-org/default-run2",
-			))
-			h.AssertNil(t, err)
-
-			builderTOML := filepath.Join("testdata", "mock_buildpacks", "builder.toml")
-
-			builderRepoName := "my-org/" + h.RandString(10)
-			_, err = h.RunE(packCmd(
-				"create-builder", builderRepoName,
-				"-b", builderTOML,
-				"-s", "my.custom.stack",
-			))
-			h.AssertNil(t, err)
-		})
-
-		it("configures override run images", func() {
-			cmd := packCmd("configure-builder", "my-org/builder1", "-r", "my-org/run", "-r", "some-standard-org/build")
-			output := h.Run(t, cmd)
-
-			cmd = packCmd("inspect-builder", "my-org/builder1")
-			output = h.Run(t, cmd)
-			h.AssertEq(t, output, `Default Run Images:
-	default/run1
-	default/run2
-
-User-provided Run Images:
-	override/run1
-	override/run2
-`)
-		})
-	})
-
 	when("pack inspect-builder", func() {
 		when("builder has no run image overrides", func() {
 

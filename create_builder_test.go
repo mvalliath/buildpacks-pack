@@ -66,7 +66,7 @@ func testCreateBuilder(t *testing.T, when spec.G, it spec.S) {
 			}
 			if err = cfg.Add(config.Stack{ID: "some.other.stack",
 				BuildImage: "other/build",
-				RunImages:  []string{"other/run"},
+				RunImages:  []string{"other/run", "other/run2"},
 			}); err != nil {
 				t.Fatalf("failed to create config: %v", err)
 			}
@@ -155,6 +155,7 @@ func testCreateBuilder(t *testing.T, when spec.G, it spec.S) {
 					h.AssertSameInstance(t, config.Repo, mockBaseImage)
 					checkBuildpacks(t, config.Buildpacks)
 					checkGroups(t, config.Groups)
+					h.AssertEq(t, config.StackID, "some.other.stack")
 				})
 
 				it("fails if the provided stack id does not exist", func() {
@@ -191,22 +192,34 @@ func testCreateBuilder(t *testing.T, when spec.G, it spec.S) {
 		})
 
 		when("#Create", func() {
-			when("successful", func() {
-				it("returns no errors", func() {
-					mockImage := mocks.NewMockImage(mockController)
+			when("stack is in config", func() {
+				var mockImage *mocks.MockImage
+
+				it.Before(func() {
+					mockImage = mocks.NewMockImage(mockController)
 					mockImage.EXPECT().AddLayer(gomock.Any()).AnyTimes()
 					mockImage.EXPECT().Save()
+				})
+
+				it("stores metadata about the run images defined for the stack", func() {
+					mockImage.EXPECT().SetLabel("io.buildpacks.pack.metadata", `{"runImages":["other/run","other/run2"]}`)
 
 					err := factory.Create(pack.BuilderConfig{
 						Repo:       mockImage,
 						Buildpacks: []pack.Buildpack{},
 						Groups:     []lifecycle.BuildpackGroup{},
 						BuilderDir: "",
+						StackID:    "some.other.stack",
 					})
 					h.AssertNil(t, err)
 				})
 			})
+
+			when("stack is not in config", func() {
+
+			})
 		})
+
 		when("a buildpack location uses no scheme uris", func() {
 			it("supports relative directories as well as archives", func() {
 				mockImage := mocks.NewMockImage(mockController)
