@@ -50,7 +50,7 @@ type CreateBuilderFlags struct {
 }
 
 func (f *BuilderFactory) BuilderConfigFromFlags(flags CreateBuilderFlags) (BuilderConfig, error) {
-	baseImage, err := f.baseImageName(flags.StackID, flags.RepoName)
+	baseImage, err := f.baseImageName(flags.StackID)
 	if err != nil {
 		return BuilderConfig{}, err
 	}
@@ -166,7 +166,7 @@ func (f *BuilderFactory) resolveBuildpackURI(builderDir string, b Buildpack) (Bu
 	}, nil
 }
 
-func (f *BuilderFactory) baseImageName(stackID, repoName string) (string, error) {
+func (f *BuilderFactory) baseImageName(stackID string) (string, error) {
 	stack, err := f.Config.Get(stackID)
 	if err != nil {
 		return "", err
