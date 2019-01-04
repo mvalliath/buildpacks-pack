@@ -50,7 +50,7 @@ type CreateBuilderFlags struct {
 }
 
 func (f *BuilderFactory) BuilderConfigFromFlags(flags CreateBuilderFlags) (BuilderConfig, error) {
-	baseImage, err := f.baseImageName(flags.StackID)
+	baseImage, err := f.buildImageName(flags.StackID)
 	if err != nil {
 		return BuilderConfig{}, err
 	}
@@ -166,7 +166,7 @@ func (f *BuilderFactory) resolveBuildpackURI(builderDir string, b Buildpack) (Bu
 	}, nil
 }
 
-func (f *BuilderFactory) baseImageName(stackID string) (string, error) {
+func (f *BuilderFactory) buildImageName(stackID string) (string, error) {
 	stack, err := f.Config.Get(stackID)
 	if err != nil {
 		return "", err
@@ -183,7 +183,7 @@ func (f *BuilderFactory) runImageNames(stackID string) ([]string, error) {
 }
 
 func (f *BuilderFactory) Create(config BuilderConfig) error {
-	tmpDir, err := ioutil.TempDir("", "create-builder") // TODO
+	tmpDir, err := ioutil.TempDir("", "create-builder")
 	if err != nil {
 		return fmt.Errorf(`failed to create temporary directory: %s`, err)
 	}
@@ -214,6 +214,10 @@ func (f *BuilderFactory) Create(config BuilderConfig) error {
 	}
 
 	runImages, err := f.runImageNames(config.StackID)
+	if err != nil {
+		return fmt.Errorf(`failed to get run images: %s`, err)
+	}
+
 	jsonBytes, err := json.Marshal(&BuilderImageMetadata{RunImages: runImages})
 	if err != nil {
 		return fmt.Errorf(`failed marshal builder image metadata: %s`, err)
