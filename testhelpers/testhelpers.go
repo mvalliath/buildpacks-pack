@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/buildpack/pack"
 	"io"
 	"io/ioutil"
 	"log"
@@ -293,17 +294,22 @@ var getBuilderImageOnce sync.Once
 func DefaultBuilderImage(t *testing.T, registryPort string) string {
 	t.Helper()
 	tag := packTag()
+	origName := fmt.Sprintf("packs/samples:%s", tag)
+	newName := fmt.Sprintf("localhost:%s/%s", registryPort, origName)
+	dockerCli := dockerCli(t)
 	getBuilderImageOnce.Do(func() {
 		if tag == defaultTag {
-			AssertNil(t, PullImage(dockerCli(t), fmt.Sprintf("packs/samples:%s", tag)))
+			AssertNil(t, PullImage(dockerCli, origName))
+			AssertNil(t, dockerCli.ImageTag(context.Background(), origName, newName))
+		} else {
+			runImageName := DefaultRunImage(t, registryPort)
+			CreateImageOnLocal(t, dockerCli, newName, fmt.Sprintf(`
+					FROM %s
+					LABEL %s="{\"runImages\": [\"%s\"]}"
+				`, origName, pack.MetadataLabel, runImageName))
 		}
-		AssertNil(t, dockerCli(t).ImageTag(
-			context.Background(),
-			fmt.Sprintf("packs/samples:%s", tag),
-			fmt.Sprintf("localhost:%s/packs/samples:%s", registryPort, tag),
-		))
 	})
-	return fmt.Sprintf("localhost:%s/packs/samples:%s", registryPort, tag)
+	return newName
 }
 
 func CreateImageOnLocal(t *testing.T, dockerCli *docker.Client, repoName, dockerFile string) {

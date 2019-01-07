@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -160,16 +161,15 @@ func (bf *BuildFactory) BuildConfigFromFlags(f *BuildFlags) (*BuildConfig, error
 		return nil, err
 	}
 
+	builderMetadataString, err := builderImage.Label(MetadataLabel)
+	var builderMetadata BuilderImageMetadata
+	if err := json.Unmarshal([]byte(builderMetadataString), &builderMetadata); err != nil {
+		return nil, fmt.Errorf("invalid builder image metadata: %s", err)
+	}
+
 	builderStackID, err := builderImage.Label("io.buildpacks.stack.id")
 	if err != nil {
 		return nil, fmt.Errorf("invalid builder image %s: %s", style.Symbol(b.Builder), err)
-	}
-	if builderStackID == "" {
-		return nil, fmt.Errorf("invalid builder image %s: missing required label %s", style.Symbol(b.Builder), style.Symbol("io.buildpacks.stack.id"))
-	}
-	stack, err := bf.Config.Get(builderStackID)
-	if err != nil {
-		return nil, err
 	}
 
 	if f.RunImage != "" {
@@ -180,11 +180,11 @@ func (bf *BuildFactory) BuildConfigFromFlags(f *BuildFlags) (*BuildConfig, error
 		if err != nil {
 			return nil, err
 		}
-		b.RunImage, err = config.ImageByRegistry(reg, stack.RunImages)
+		b.RunImage, err = config.ImageByRegistry(reg, builderMetadata.RunImages)
 		if err != nil {
 			return nil, err
 		}
-		b.Logger.Verbose("Selected run image %s from stack %s", style.Symbol(b.RunImage), style.Symbol(builderStackID))
+		b.Logger.Verbose("Selected run image %s from builder %s", style.Symbol(b.RunImage), style.Symbol(b.Builder))
 	}
 
 	var runImage image.Image
