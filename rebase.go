@@ -44,7 +44,7 @@ func (f *RebaseFactory) RebaseConfigFromFlags(flags RebaseFlags) (RebaseConfig, 
 		return RebaseConfig{}, err
 	}
 
-	stackID, err := image.Label("io.buildpacks.stack.id")
+	stackID, err := image.Label(StackLabel)
 	if err != nil {
 		return RebaseConfig{}, err
 	}
