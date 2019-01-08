@@ -51,7 +51,7 @@ func main() {
 		setDefaultStackCommand,
 		setDefaultBuilderCommand,
 		configureBuilderCommand,
-		inspectBuilderCommand,
+		inspectRemoteBuilderCommand,
 		versionCommand,
 	} {
 		rootCmd.AddCommand(f())
@@ -385,7 +385,6 @@ func configureBuilderCommand() *cobra.Command {
 		Short: "Override a builder's default run images with one or more overrides",
 		Args:  cobra.ExactArgs(1),
 		RunE: logError(func(cmd *cobra.Command, args []string) error {
-			logger.Info("%v (%d)", runImages, len(runImages))
 			return nil
 		}),
 	}
@@ -395,16 +394,16 @@ func configureBuilderCommand() *cobra.Command {
 	return cmd
 }
 
-func inspectBuilderCommand() *cobra.Command {
+func inspectRemoteBuilderCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "inspect-builder <builder-image-name>",
-		Short: "Show a builder's default run images and any run image overrides",
+		Short: "Show information about a remote builder",
 		Args:  cobra.ExactArgs(1),
 		RunE: logError(func(cmd *cobra.Command, args []string) error {
-			return nil
+			return nil // TODO
 		}),
 	}
-	addHelpFlag(cmd, "inspect-builder")
+	addHelpFlag(cmd, "inspect-remote-builder")
 	return cmd
 }
 

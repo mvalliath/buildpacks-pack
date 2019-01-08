@@ -12,9 +12,10 @@ import (
 )
 
 type Config struct {
-	Stacks         []Stack `toml:"stacks"`
-	DefaultStackID string  `toml:"default-stack-id"`
-	DefaultBuilder string  `toml:"default-builder"`
+	Stacks         []Stack   `toml:"stacks"`
+	Builders       []Builder `toml:"builders"`
+	DefaultStackID string    `toml:"default-stack-id"`
+	DefaultBuilder string    `toml:"default-builder"`
 	configPath     string
 }
 
@@ -23,6 +24,11 @@ type Stack struct {
 	BuildImage  string   `toml:"build-image"`
 	BuildImages []string `toml:"build-images,omitempty"` // Deprecated
 	RunImages   []string `toml:"run-images"`
+}
+
+type Builder struct {
+	Image     string   `toml:"image"`
+	RunImages []string `toml:"run-images"`
 }
 
 func NewDefault() (*Config, error) {
@@ -195,6 +201,16 @@ func (c *Config) Path() string {
 func (c *Config) SetDefaultBuilder(builder string) error {
 	c.DefaultBuilder = builder
 	return c.save()
+}
+
+func (c *Config) GetBuilder(image string) *Builder {
+	for b := range c.Builders {
+		builder := &c.Builders[b]
+		if builder.Image == image {
+			return builder
+		}
+	}
+	return nil
 }
 
 func ImageByRegistry(registry string, images []string) (string, error) {

@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -91,16 +92,20 @@ func AssertMatch(t *testing.T, actual string, expected string) {
 
 func AssertNil(t *testing.T, actual interface{}) {
 	t.Helper()
-	if actual != nil {
+	if !isNil(actual) {
 		t.Fatalf("Expected nil: %s", actual)
 	}
 }
 
 func AssertNotNil(t *testing.T, actual interface{}) {
 	t.Helper()
-	if actual == nil {
+	if isNil(actual) {
 		t.Fatal("Expected not nil")
 	}
+}
+
+func isNil(value interface{}) bool {
+	return value == nil || reflect.ValueOf(value).IsNil()
 }
 
 func AssertNotEq(t *testing.T, actual, expected interface{}) {
