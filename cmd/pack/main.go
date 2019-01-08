@@ -269,29 +269,6 @@ func setDefaultStackCommand() *cobra.Command {
 	return cmd
 }
 
-// TODO move down out of stack things
-func setDefaultBuilderCommand() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "set-default-builder <builder-name>",
-		Short: "Set default builder used by other commands",
-		Args:  cobra.ExactArgs(1),
-		RunE: logError(func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.NewDefault()
-			if err != nil {
-				return err
-			}
-			err = cfg.SetDefaultBuilder(args[0])
-			if err != nil {
-				return err
-			}
-			logger.Info("Builder %s is now the default builder", style.Symbol(args[0]))
-			return nil
-		}),
-	}
-	addHelpFlag(cmd, "set-default-builder")
-	return cmd
-}
-
 func updateStackCommand() *cobra.Command {
 	flags := struct {
 		BuildImage string
@@ -374,6 +351,28 @@ func showStacksCommand() *cobra.Command {
 		}),
 	}
 	addHelpFlag(cmd, "stacks")
+	return cmd
+}
+
+func setDefaultBuilderCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "set-default-builder <builder-name>",
+		Short: "Set default builder used by other commands",
+		Args:  cobra.ExactArgs(1),
+		RunE: logError(func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.NewDefault()
+			if err != nil {
+				return err
+			}
+			err = cfg.SetDefaultBuilder(args[0])
+			if err != nil {
+				return err
+			}
+			logger.Info("Builder %s is now the default builder", style.Symbol(args[0]))
+			return nil
+		}),
+	}
+	addHelpFlag(cmd, "set-default-builder")
 	return cmd
 }
 
