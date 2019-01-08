@@ -228,7 +228,7 @@ func addStackCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := cfg.Add(config.Stack{
+			if err := cfg.AddStack(config.Stack{
 				ID:         args[0],
 				BuildImage: flags.BuildImage,
 				RunImages:  flags.RunImages,
@@ -306,7 +306,7 @@ func updateStackCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := cfg.Update(args[0], config.Stack{
+			if err := cfg.UpdateStack(args[0], config.Stack{
 				BuildImage: flags.BuildImage,
 				RunImages:  flags.RunImages,
 			}); err != nil {
@@ -332,7 +332,7 @@ func deleteStackCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := cfg.Delete(args[0]); err != nil {
+			if err := cfg.DeleteStack(args[0]); err != nil {
 				return err
 			}
 			logger.Info("Stack %s deleted", style.Symbol(args[0]))

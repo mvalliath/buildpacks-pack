@@ -91,7 +91,7 @@ func (c *Config) migrate() {
 
 	c.migrateBuildImagesToSingularBuildImage()
 
-	s, err := c.Get(initialStack.ID)
+	s, err := c.GetStack(initialStack.ID)
 	if err == nil {
 		migrateInitialImages(s, initialStack.BuildImage, initialStack.RunImages[0])
 	} else {
@@ -122,7 +122,7 @@ func migrateInitialImages(stack *Stack, buildImage, runImage string) {
 	}
 }
 
-func (c *Config) Get(stackID string) (*Stack, error) {
+func (c *Config) GetStack(stackID string) (*Stack, error) {
 	if stackID == "" {
 		stackID = c.DefaultStackID
 	}
@@ -135,16 +135,16 @@ func (c *Config) Get(stackID string) (*Stack, error) {
 	return nil, missingStackError(stackID)
 }
 
-func (c *Config) Add(stack Stack) error {
-	if _, err := c.Get(stack.ID); err == nil {
+func (c *Config) AddStack(stack Stack) error {
+	if _, err := c.GetStack(stack.ID); err == nil {
 		return fmt.Errorf("stack %s already exists", style.Symbol(stack.ID))
 	}
 	c.Stacks = append(c.Stacks, stack)
 	return c.save()
 }
 
-func (c *Config) Update(stackID string, newStack Stack) error {
-	stk, err := c.Get(stackID)
+func (c *Config) UpdateStack(stackID string, newStack Stack) error {
+	stk, err := c.GetStack(stackID)
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func (c *Config) Update(stackID string, newStack Stack) error {
 	return c.save()
 }
 
-func (c *Config) Delete(stackID string) error {
+func (c *Config) DeleteStack(stackID string) error {
 	if c.DefaultStackID == stackID {
 		return fmt.Errorf(`%s cannot be deleted when it is the default stack. You can change your default stack by running "pack set-default-stack".`, stackID)
 	}
@@ -177,7 +177,7 @@ func (c *Config) Delete(stackID string) error {
 }
 
 func (c *Config) SetDefaultStack(stackID string) error {
-	_, err := c.Get(stackID)
+	_, err := c.GetStack(stackID)
 	if err != nil {
 		return err
 	}

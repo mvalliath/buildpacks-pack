@@ -98,7 +98,7 @@ func (f *RebaseFactory) Rebase(cfg RebaseConfig) error {
 }
 
 func (f *RebaseFactory) runImageName(stackID, repoName string) (string, error) {
-	stack, err := f.Config.Get(stackID)
+	stack, err := f.Config.GetStack(stackID)
 	if err != nil {
 		return "", err
 	}

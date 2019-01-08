@@ -167,7 +167,7 @@ func (f *BuilderFactory) resolveBuildpackURI(builderDir string, b Buildpack) (Bu
 }
 
 func (f *BuilderFactory) buildImageName(stackID string) (string, error) {
-	stack, err := f.Config.Get(stackID)
+	stack, err := f.Config.GetStack(stackID)
 	if err != nil {
 		return "", err
 	}
@@ -175,7 +175,7 @@ func (f *BuilderFactory) buildImageName(stackID string) (string, error) {
 }
 
 func (f *BuilderFactory) runImageNames(stackID string) ([]string, error) {
-	stack, err := f.Config.Get(stackID)
+	stack, err := f.Config.GetStack(stackID)
 	if err != nil {
 		return nil, err
 	}
