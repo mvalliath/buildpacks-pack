@@ -175,7 +175,7 @@ func (bf *BuildFactory) BuildConfigFromFlags(f *BuildFlags) (*BuildConfig, error
 	} else {
 		builderMetadataString, err := builderImage.Label(MetadataLabel)
 		if err != nil {
-			return nil, fmt.Errorf("invalid builder image %s: missing required label %s", style.Symbol(b.Builder), style.Symbol(MetadataLabel))
+			return nil, fmt.Errorf("invalid builder image %s: missing required label %s -- try recreating builder", style.Symbol(b.Builder), style.Symbol(MetadataLabel))
 		}
 		var builderMetadata BuilderImageMetadata
 		if err := json.Unmarshal([]byte(builderMetadataString), &builderMetadata); err != nil {

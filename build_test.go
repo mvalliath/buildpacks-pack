@@ -299,7 +299,7 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 				RepoName: "some/app",
 				Builder:  "some/builder",
 			})
-			h.AssertError(t, err, "invalid builder image 'some/builder': missing required label 'io.buildpacks.pack.metadata'")
+			h.AssertError(t, err, "invalid builder image 'some/builder': missing required label 'io.buildpacks.pack.metadata' -- try recreating builder")
 		})
 
 		it("returns an errors when the builder metadata label is unparsable", func() {
@@ -510,19 +510,17 @@ PATH
 					subject.Publish = true
 				})
 
-				it("informs the user", func() {
+				it("succeeds and does nothing", func() {
 					err := subject.Analyze()
 					h.AssertNil(t, err)
-					h.AssertContains(t, outBuf.String(), "WARNING: skipping analyze")
 				})
 			})
 
 			when("daemon", func() {
 				it.Before(func() { subject.Publish = false })
-				it("informs the user", func() {
+				it("succeeds and does nothing", func() {
 					err := subject.Analyze()
 					h.AssertNil(t, err)
-					h.AssertContains(t, outBuf.String(), "WARNING: skipping analyze")
 				})
 			})
 		})
