@@ -77,11 +77,11 @@ func testInspectBuilder(t *testing.T, when spec.G, it spec.S) {
 			})
 
 			when("builder does not exist in config", func() {
-				it("returns the builder with default run images", func() {
+				it("returns the builder with default run images only", func() {
 					builder, err := inspector.Inspect("some/builder")
 					h.AssertNil(t, err)
 					h.AssertEq(t, builder.Image, "some/builder")
-					h.AssertNil(t, builder.LocalRunImages)
+					h.AssertEq(t, len(builder.LocalRunImages), 0)
 					h.AssertEq(t, builder.DefaultRunImages, []string{"some/default", "gcr.io/some/default"})
 				})
 			})

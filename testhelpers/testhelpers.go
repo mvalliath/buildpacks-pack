@@ -15,7 +15,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -105,7 +104,7 @@ func AssertNotNil(t *testing.T, actual interface{}) {
 }
 
 func isNil(value interface{}) bool {
-	return value == nil || reflect.ValueOf(value).IsNil()
+	return cmp.Equal(nil, value)
 }
 
 func AssertNotEq(t *testing.T, actual, expected interface{}) {
@@ -339,7 +338,6 @@ func CreateImageOnRemote(t *testing.T, dockerCli *docker.Client, registryPort, r
 	t.Helper()
 	imageName := fmt.Sprintf("localhost:%s/%s", registryPort, repoName)
 	defer DockerRmi(dockerCli, imageName)
-
 	CreateImageOnLocal(t, dockerCli, imageName, dockerFile)
 	AssertNil(t, pushImage(dockerCli, imageName))
 	return imageName

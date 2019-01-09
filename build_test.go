@@ -185,12 +185,34 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 			h.AssertEq(t, config.Builder, "some/builder")
 		})
 
-		it("selects from locally-configured run images first", func() {
-			// TODO: AM: Write this test
-			// builder image run images: 'registry.com/default/run', 'default/run'
-			// local config run images: 'registry.com/override/run'
+		when("both builder and local override run images have a matching registry", func() {
+			it.Before(func() {
+				factory.Config.Builders = []config.Builder{
+					{
+						Image:     "some/builder",
+						RunImages: []string{"registry.com/override/run"},
+					},
+				}
 
-			// selected: 'registry.com/override/run'
+				mockBuilderImage := mocks.NewMockImage(mockController)
+				mockBuilderImage.EXPECT().Label("io.buildpacks.stack.id").Return("some.stack.id", nil)
+				mockBuilderImage.EXPECT().Label("io.buildpacks.pack.metadata").Return(`{"runImages": ["registry.com/default/run", "default/run"]}`, nil)
+				mockImageFactory.EXPECT().NewLocal("some/builder", true).Return(mockBuilderImage, nil)
+
+				mockRunImage := mocks.NewMockImage(mockController)
+				mockRunImage.EXPECT().Label("io.buildpacks.stack.id").Return("some.stack.id", nil)
+				mockImageFactory.EXPECT().NewLocal("registry.com/override/run", true).Return(mockRunImage, nil)
+			})
+
+			it("selects from local override run images first", func() {
+				config, err := factory.BuildConfigFromFlags(&pack.BuildFlags{
+					RepoName: "registry.com/some/app",
+					Builder:  "some/builder",
+				})
+				h.AssertNil(t, err)
+				h.AssertEq(t, config.RunImage, "registry.com/override/run")
+				h.AssertEq(t, config.Builder, "some/builder")
+			})
 		})
 
 		it("uses a remote run image when --publish is passed", func() {
@@ -545,10 +567,8 @@ PATH
 
 			when("publish", func() {
 				it.Before(func() {
-					subject.RepoName = "localhost:" + registryPort + "/" + subject.RepoName
 					subject.Publish = true
-
-					h.CreateImageOnRemote(t, dockerCli, subject.RepoName, dockerFile)
+					subject.RepoName = h.CreateImageOnRemote(t, dockerCli, registryPort, subject.RepoName, dockerFile)
 				})
 
 				it("places files in workspace and sets owner to pack", func() {

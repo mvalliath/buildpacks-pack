@@ -186,7 +186,11 @@ func (bf *BuildFactory) BuildConfigFromFlags(f *BuildFlags) (*BuildConfig, error
 		if err != nil {
 			return nil, err
 		}
-		b.RunImage, err = config.ImageByRegistry(reg, builderMetadata.RunImages)
+		var overrideRunImages []string
+		if b := bf.Config.GetBuilder(b.Builder); b != nil {
+			overrideRunImages = b.RunImages
+		}
+		b.RunImage, err = config.ImageByRegistry(reg, append(overrideRunImages, builderMetadata.RunImages...))
 		if err != nil {
 			return nil, err
 		}
