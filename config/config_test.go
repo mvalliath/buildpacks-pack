@@ -574,6 +574,58 @@ default-stack-id = "stack-1"
 		})
 	})
 
+	when("Config#ConfigureBuilder", func() {
+		var subject *config.Config
+
+		when("builder exists in config", func() {
+			it.Before(func() {
+				h.AssertNil(t, ioutil.WriteFile(filepath.Join(tmpDir, "config.toml"), []byte(`
+[[builders]]
+  image = "some/builder"
+  run-images = ["some/run", "some.registry/some/run"]
+`), 0666))
+				var err error
+				subject, err = config.New(tmpDir)
+				h.AssertNil(t, err)
+			})
+
+			it("updates the builder", func() {
+				subject.ConfigureBuilder("some/builder", []string{"some-other/run"})
+
+				reloadedConfig, err := config.New(tmpDir)
+				h.AssertNil(t, err)
+
+				builder := reloadedConfig.GetBuilder("some/builder")
+
+				h.AssertNotNil(t, builder)
+				h.AssertEq(t, len(builder.RunImages), 1)
+				h.AssertSliceContains(t, builder.RunImages, "some-other/run")
+			})
+		})
+
+		when("builder does not exist in config", func() {
+			it.Before(func() {
+				h.AssertNil(t, ioutil.WriteFile(filepath.Join(tmpDir, "config.toml"), nil, 0666))
+				var err error
+				subject, err = config.New(tmpDir)
+				h.AssertNil(t, err)
+			})
+
+			it("adds the builder", func() {
+				subject.ConfigureBuilder("some/builder", []string{"some-other/run"})
+
+				reloadedConfig, err := config.New(tmpDir)
+				h.AssertNil(t, err)
+
+				builder := reloadedConfig.GetBuilder("some/builder")
+
+				h.AssertNotNil(t, builder)
+				h.AssertEq(t, len(builder.RunImages), 1)
+				h.AssertSliceContains(t, builder.RunImages, "some-other/run")
+			})
+		})
+	})
+
 	when("ImageByRegistry", func() {
 		var images []string
 		it.Before(func() {

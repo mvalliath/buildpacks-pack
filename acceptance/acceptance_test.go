@@ -552,21 +552,27 @@ func testPack(t *testing.T, when spec.G, it spec.S) {
 		})
 	}, spec.Parallel(), spec.Report(report.Terminal{}))
 
-	when.Focus("pack inspect-remote-builder", func() {
+	when("pack inspect-remote-builder", func() {
 		it("shows remote builder info", func() {
 			runImage := "some/run"
+			locallyConfiguredRunImage := "some-registry.com/" + runImage
 			remoteBuilder := h.CreateImageOnRemote(t, dockerCli, registryPort, "some/builder",
 				fmt.Sprintf(`
 					FROM scratch
 					LABEL %s="{\"runImages\": [\"%s\"]}"
 				`, pack.MetadataLabel, runImage))
 
-			cmd := packCmd("inspect-remote-builder", remoteBuilder)
+			cmd := packCmd("configure-builder", remoteBuilder, "--run-image", locallyConfiguredRunImage)
 			output := h.Run(t, cmd)
+			h.AssertEq(t, output, fmt.Sprintf("Builder '%s' configured\n", remoteBuilder))
+
+			cmd = packCmd("inspect-remote-builder", remoteBuilder)
+			output = h.Run(t, cmd)
 
 			h.AssertEq(t, output, fmt.Sprintf(`Run Images:
+	%s (local)
 	%s
-`, runImage)) // TODO: Add local run image overrides
+`, locallyConfiguredRunImage, runImage))
 		})
 	})
 }

@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -104,7 +105,7 @@ func AssertNotNil(t *testing.T, actual interface{}) {
 }
 
 func isNil(value interface{}) bool {
-	return cmp.Equal(nil, value)
+	return value == nil || (reflect.TypeOf(value).Kind() == reflect.Ptr && reflect.ValueOf(value).IsNil())
 }
 
 func AssertNotEq(t *testing.T, actual, expected interface{}) {

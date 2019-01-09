@@ -165,7 +165,6 @@ func (c *Config) UpdateStack(stackID string, newStack Stack) error {
 	if len(newStack.RunImages) > 0 {
 		stk.RunImages = newStack.RunImages
 	}
-
 	return c.save()
 }
 
@@ -211,6 +210,15 @@ func (c *Config) GetBuilder(image string) *Builder {
 		}
 	}
 	return nil
+}
+
+func (c *Config) ConfigureBuilder(image string, runImages []string) {
+	if builder := c.GetBuilder(image); builder != nil {
+		builder.RunImages = runImages
+	} else {
+		c.Builders = append(c.Builders, Builder{Image: image, RunImages: runImages})
+	}
+	c.save()
 }
 
 func ImageByRegistry(registry string, images []string) (string, error) {

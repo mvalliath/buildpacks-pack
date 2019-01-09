@@ -384,6 +384,14 @@ func configureBuilderCommand() *cobra.Command {
 		Short: "Override a builder's default run images with one or more overrides",
 		Args:  cobra.ExactArgs(1),
 		RunE: logError(func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.NewDefault()
+			if err != nil {
+				return err
+			}
+
+			builder := args[0]
+			cfg.ConfigureBuilder(builder, runImages)
+			logger.Info("Builder %s configured", style.Symbol(builder))
 			return nil
 		}),
 	}
@@ -411,8 +419,11 @@ func inspectRemoteBuilderCommand() *cobra.Command {
 			}
 
 			logger.Info("Run Images:")
-			for _, runImage := range builder.DefaultRunImages {
-				logger.Info("\t%s", runImage)
+			for _, r := range builder.LocalRunImages {
+				logger.Info("\t%s (local)", r)
+			}
+			for _, r := range builder.DefaultRunImages {
+				logger.Info("\t%s", r)
 			}
 			return nil
 		}),

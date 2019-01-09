@@ -32,7 +32,7 @@ func TestCreateBuilder(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("create builder is not implemented on windows")
 	}
-	spec.Run(t, "create-builder", testCreateBuilder, spec.Sequential(), spec.Report(report.Terminal{}))
+	spec.Run(t, "create-builder", testCreateBuilder, spec.Parallel(), spec.Report(report.Terminal{}))
 }
 
 func testCreateBuilder(t *testing.T, when spec.G, it spec.S) {
