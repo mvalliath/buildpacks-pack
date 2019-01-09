@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/buildpack/pack"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
@@ -30,24 +31,24 @@ import (
 	h "github.com/buildpack/pack/testhelpers"
 )
 
-var pack string
+var packPath string
 var dockerCli *docker.Client
 var registryPort string
 
 func TestPack(t *testing.T) {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	pack = os.Getenv("PACK_PATH")
-	if pack == "" {
+	packPath = os.Getenv("PACK_PATH")
+	if packPath == "" {
 		packTmpDir, err := ioutil.TempDir("", "pack.acceptance.binary.")
 		if err != nil {
 			t.Fatal(err)
 		}
-		pack = filepath.Join(packTmpDir, "pack")
+		packPath = filepath.Join(packTmpDir, "pack")
 		if runtime.GOOS == "windows" {
-			pack = pack + ".exe"
+			packPath = packPath + ".exe"
 		}
-		if txt, err := exec.Command("go", "build", "-o", pack, "../cmd/pack").CombinedOutput(); err != nil {
+		if txt, err := exec.Command("go", "build", "-o", packPath, "../cmd/pack").CombinedOutput(); err != nil {
 			t.Fatal("building pack cli:\n", string(txt), err)
 		}
 		defer os.RemoveAll(packTmpDir)
@@ -72,7 +73,7 @@ func testPack(t *testing.T, when spec.G, it spec.S) {
 			"--no-color",
 		}, args...)
 		cmd := exec.Command(
-			pack,
+			packPath,
 			cmdArgs...,
 		)
 		cmd.Env = append(os.Environ(), "PACK_HOME="+packHome)
@@ -80,8 +81,8 @@ func testPack(t *testing.T, when spec.G, it spec.S) {
 	}
 
 	it.Before(func() {
-		if _, err := os.Stat(pack); os.IsNotExist(err) {
-			t.Fatal("No file found at PACK_PATH environment variable:", pack)
+		if _, err := os.Stat(packPath); os.IsNotExist(err) {
+			t.Fatal("No file found at PACK_PATH environment variable:", packPath)
 		}
 
 		var err error
@@ -551,21 +552,21 @@ func testPack(t *testing.T, when spec.G, it spec.S) {
 		})
 	}, spec.Parallel(), spec.Report(report.Terminal{}))
 
-	when("pack inspect-builder", func() {
-		when("builder has no run image overrides", func() {
+	when.Focus("pack inspect-remote-builder", func() {
+		it("shows remote builder info", func() {
+			runImage := "some/run"
+			remoteBuilder := h.CreateImageOnRemote(t, dockerCli, registryPort, "some/builder",
+				fmt.Sprintf(`
+					FROM scratch
+					LABEL %s="{\"runImages\": [\"%s\"]}"
+				`, pack.MetadataLabel, runImage))
 
-		})
+			cmd := packCmd("inspect-remote-builder", remoteBuilder)
+			output := h.Run(t, cmd)
 
-		when("builder does not exist", func() {
-
-		})
-
-		when("builder exists but does not contain a stack label", func() {
-
-		})
-
-		when("builder exists and contains a stack label, but stack does not exist", func() {
-
+			h.AssertEq(t, output, fmt.Sprintf(`Run Images:
+	%s
+`, runImage)) // TODO: Add local run image overrides
 		})
 	})
 }

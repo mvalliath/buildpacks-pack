@@ -335,24 +335,14 @@ func CreateImageOnLocal(t *testing.T, dockerCli *docker.Client, repoName, docker
 	res.Body.Close()
 }
 
-func CreateImageOnRemote(t *testing.T, dockerCli *docker.Client, repoName, dockerFile string) string {
+func CreateImageOnRemote(t *testing.T, dockerCli *docker.Client, registryPort, repoName, dockerFile string) string {
 	t.Helper()
-	defer DockerRmi(dockerCli, repoName)
+	imageName := fmt.Sprintf("localhost:%s/%s", registryPort, repoName)
+	defer DockerRmi(dockerCli, imageName)
 
-	CreateImageOnLocal(t, dockerCli, repoName, dockerFile)
-
-	var topLayer string
-	inspect, _, err := dockerCli.ImageInspectWithRaw(context.TODO(), repoName)
-	AssertNil(t, err)
-	if len(inspect.RootFS.Layers) > 0 {
-		topLayer = inspect.RootFS.Layers[len(inspect.RootFS.Layers)-1]
-	} else {
-		topLayer = "N/A"
-	}
-
-	AssertNil(t, pushImage(dockerCli, repoName))
-
-	return topLayer
+	CreateImageOnLocal(t, dockerCli, imageName, dockerFile)
+	AssertNil(t, pushImage(dockerCli, imageName))
+	return imageName
 }
 
 func DockerRmi(dockerCli *docker.Client, repoNames ...string) error {

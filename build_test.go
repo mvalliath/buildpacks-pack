@@ -185,6 +185,14 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 			h.AssertEq(t, config.Builder, "some/builder")
 		})
 
+		it("selects from locally-configured run images first", func() {
+			// TODO: AM: Write this test
+			// builder image run images: 'registry.com/default/run', 'default/run'
+			// local config run images: 'registry.com/override/run'
+
+			// selected: 'registry.com/override/run'
+		})
+
 		it("uses a remote run image when --publish is passed", func() {
 			mockBuilderImage := mocks.NewMockImage(mockController)
 			mockBuilderImage.EXPECT().Label("io.buildpacks.stack.id").Return("some.stack.id", nil)
@@ -265,7 +273,7 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 			h.AssertEq(t, config.AppDir, os.Getenv("PWD"))
 		})
 
-		it("returns an errors when the builder stack label is missing", func() {
+		it("returns an error when the builder stack label is missing", func() {
 			mockBuilderImage := mocks.NewMockImage(mockController)
 			mockBuilderImage.EXPECT().Label("io.buildpacks.stack.id").Return("", errors.New("error!"))
 			mockImageFactory.EXPECT().NewLocal("some/builder", true).Return(mockBuilderImage, nil)
@@ -277,7 +285,7 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 			h.AssertError(t, err, "invalid builder image 'some/builder': missing required label 'io.buildpacks.stack.id'")
 		})
 
-		it("returns an errors when the builder stack label is empty", func() {
+		it("returns an error when the builder stack label is empty", func() {
 			mockBuilderImage := mocks.NewMockImage(mockController)
 			mockBuilderImage.EXPECT().Label("io.buildpacks.stack.id").Return("", nil)
 			mockImageFactory.EXPECT().NewLocal("some/builder", true).Return(mockBuilderImage, nil)
@@ -289,7 +297,7 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 			h.AssertError(t, err, "invalid stack label for builder image 'some/builder': stack must not be empty string")
 		})
 
-		it("returns an errors when the builder metadata label is missing", func() {
+		it("returns an error when the builder metadata label is missing", func() {
 			mockBuilderImage := mocks.NewMockImage(mockController)
 			mockBuilderImage.EXPECT().Label("io.buildpacks.stack.id").Return("some.stack.id", nil)
 			mockBuilderImage.EXPECT().Label("io.buildpacks.pack.metadata").Return("", errors.New("error!"))
@@ -302,7 +310,7 @@ func testBuild(t *testing.T, when spec.G, it spec.S) {
 			h.AssertError(t, err, "invalid builder image 'some/builder': missing required label 'io.buildpacks.pack.metadata' -- try recreating builder")
 		})
 
-		it("returns an errors when the builder metadata label is unparsable", func() {
+		it("returns an error when the builder metadata label is unparsable", func() {
 			mockBuilderImage := mocks.NewMockImage(mockController)
 			mockBuilderImage.EXPECT().Label("io.buildpacks.stack.id").Return("some.stack.id", nil)
 			mockBuilderImage.EXPECT().Label("io.buildpacks.pack.metadata").Return("junk", nil)

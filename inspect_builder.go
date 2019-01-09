@@ -2,6 +2,7 @@ package pack
 
 import (
 	"encoding/json"
+	"github.com/buildpack/lifecycle/image"
 	"github.com/buildpack/pack/config"
 	"github.com/buildpack/pack/style"
 	"github.com/pkg/errors"
@@ -16,6 +17,23 @@ type Builder struct {
 	Image            string
 	LocalRunImages   []string
 	DefaultRunImages []string
+}
+
+func DefaultBuilderInspector() (*BuilderInspector, error) {
+	cfg, err := config.NewDefault()
+	if err != nil {
+		return nil, err
+	}
+
+	factory, err := image.DefaultFactory()
+	if err != nil {
+		return nil, err
+	}
+
+	return &BuilderInspector{
+		Config:       cfg,
+		ImageFactory: factory,
+	}, nil
 }
 
 func (b *BuilderInspector) Inspect(builderName string) (Builder, error) {
@@ -41,7 +59,7 @@ func (b *BuilderInspector) Inspect(builderName string) (Builder, error) {
 func (b *BuilderInspector) getDefaultRunImages(builderName string) ([]string, error) {
 	builderImage, err := b.ImageFactory.NewRemote(builderName)
 	if err != nil {
-		return nil, nil
+		return nil, errors.Wrapf(err, "failed to get remote image %s", style.Symbol(builderName))
 	}
 	var metadata BuilderImageMetadata
 	label, err := builderImage.Label(MetadataLabel)

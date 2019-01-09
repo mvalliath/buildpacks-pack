@@ -395,11 +395,26 @@ func configureBuilderCommand() *cobra.Command {
 
 func inspectRemoteBuilderCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "inspect-builder <builder-image-name>",
+		Use:   "inspect-remote-builder <builder-image-name>",
 		Short: "Show information about a remote builder",
 		Args:  cobra.ExactArgs(1),
 		RunE: logError(func(cmd *cobra.Command, args []string) error {
-			return nil // TODO
+			inspector, err := pack.DefaultBuilderInspector()
+			if err != nil {
+				return err
+			}
+
+			remoteBuilder := args[0]
+			builder, err := inspector.Inspect(remoteBuilder)
+			if err != nil {
+				return err
+			}
+
+			logger.Info("Run Images:")
+			for _, runImage := range builder.DefaultRunImages {
+				logger.Info("\t%s", runImage)
+			}
+			return nil
 		}),
 	}
 	addHelpFlag(cmd, "inspect-remote-builder")

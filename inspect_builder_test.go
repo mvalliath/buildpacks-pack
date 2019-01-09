@@ -87,6 +87,17 @@ func testInspectBuilder(t *testing.T, when spec.G, it spec.S) {
 			})
 		})
 
+		when("error getting remote", func() {
+			it.Before(func() {
+				mockImageFactory.EXPECT().NewRemote("some/builder").Return(nil, errors.New("error!"))
+			})
+
+			it("returns an error", func() {
+				_, err := inspector.Inspect("some/builder")
+				h.AssertError(t, err, "failed to get remote image 'some/builder': error!")
+			})
+		})
+
 		when("builder has missing metadata label", func() {
 			it.Before(func() {
 				mockBuilderImage := mocks.NewMockImage(mockController)
