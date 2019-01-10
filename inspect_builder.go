@@ -2,6 +2,7 @@ package pack
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/buildpack/lifecycle/image"
 	"github.com/buildpack/pack/config"
 	"github.com/buildpack/pack/style"
@@ -65,6 +66,11 @@ func (b *BuilderInspector) getDefaultRunImages(builderName string) ([]string, er
 	label, err := builderImage.Label(MetadataLabel)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to find run images for builder %s", style.Symbol(builderName))
+	}
+	if label == "" {
+		// TODO: AM: Test this
+		// This exact same error message is used in two places -- should we extract it somewhere?
+		return nil, fmt.Errorf("invalid builder image %s: missing required label %s -- try recreating builder", style.Symbol(builderName), style.Symbol(MetadataLabel))
 	}
 	if err := json.Unmarshal([]byte(label), &metadata); err != nil {
 		return nil, errors.Wrapf(err, "failed to parse run images for builder %s", style.Symbol(builderName))

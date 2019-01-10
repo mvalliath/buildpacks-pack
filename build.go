@@ -163,22 +163,29 @@ func (bf *BuildFactory) BuildConfigFromFlags(f *BuildFlags) (*BuildConfig, error
 
 	builderStackID, err := builderImage.Label(StackLabel)
 	if err != nil {
-		return nil, fmt.Errorf("invalid builder image %s: missing required label %s", style.Symbol(b.Builder), style.Symbol(StackLabel))
+		// TODO: AM: reword this for error getting label
+		return nil, errors.Wrapf(err, "")
 	}
 	if builderStackID == "" {
-		return nil, fmt.Errorf("invalid stack label for builder image %s: stack must not be empty string", style.Symbol(b.Builder))
+		// TODO: AM: Test this
+		return nil, fmt.Errorf("invalid builder image %s: missing required label %s", style.Symbol(b.Builder), style.Symbol(StackLabel))
 	}
 
 	if f.RunImage != "" {
 		bf.Logger.Verbose("Using user-provided run image %s", style.Symbol(f.RunImage))
 		b.RunImage = f.RunImage
 	} else {
-		builderMetadataString, err := builderImage.Label(MetadataLabel)
+		label, err := builderImage.Label(MetadataLabel)
 		if err != nil {
+			// TODO: AM: reword this for error getting label
+			return nil, errors.Wrapf(err, "")
+		}
+		if label == "" {
+			// TODO: AM: Test this
 			return nil, fmt.Errorf("invalid builder image %s: missing required label %s -- try recreating builder", style.Symbol(b.Builder), style.Symbol(MetadataLabel))
 		}
 		var builderMetadata BuilderImageMetadata
-		if err := json.Unmarshal([]byte(builderMetadataString), &builderMetadata); err != nil {
+		if err := json.Unmarshal([]byte(label), &builderMetadata); err != nil {
 			return nil, fmt.Errorf("invalid builder image metadata: %s", err)
 		}
 
