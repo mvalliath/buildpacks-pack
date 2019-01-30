@@ -9,7 +9,7 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/golang/mock v1.2.0
 	github.com/google/go-cmp v0.2.0
-	github.com/google/go-containerregistry v0.0.0-20181023232207-eb57122f1bf9
+	github.com/google/go-containerregistry v0.0.0-20190110221225-f514e780f7cd
 	github.com/google/uuid v0.0.0-20171129191014-dec09d789f3d
 	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.4 // indirect
@@ -20,3 +20,5 @@ require (
 )
 
 replace github.com/google/go-containerregistry v0.0.0-20181023232207-eb57122f1bf9 => github.com/dgodd/go-containerregistry v0.0.0-20180912122137-611aad063148a69435dccd3cf8475262c11814f6
+
+replace github.com/buildpack/lifecycle v0.0.0-20181218142129-1f72581303b3 => ../lifecycle

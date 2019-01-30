@@ -91,8 +91,9 @@ const (
 	planPath      = "/workspace/plan.toml"
 )
 
-func DefaultBuildFactory(logger *logging.Logger, cache Cache, dockerClient Docker) (*BuildFactory, error) {
+func DefaultBuildFactory(logger *logging.Logger, cache Cache, dockerClient Docker, imageFactory ImageFactory) (*BuildFactory, error) {
 	f := &BuildFactory{
+		ImageFactory: imageFactory,
 		Logger: logger,
 		FS:     &fs.FS{},
 		Cache:  cache,
@@ -102,11 +103,6 @@ func DefaultBuildFactory(logger *logging.Logger, cache Cache, dockerClient Docke
 	f.Cli = dockerClient
 
 	f.Config, err = config.NewDefault()
-	if err != nil {
-		return nil, err
-	}
-
-	f.ImageFactory, err = image.DefaultFactory()
 	if err != nil {
 		return nil, err
 	}
@@ -271,8 +267,7 @@ func (bf *BuildFactory) BuildConfigFromFlags(f *BuildFlags) (*BuildConfig, error
 	return b, nil
 }
 
-// TODO: This function has no tests! Also, should it take a `BuildFlags` object instead of all these args?
-func Build(ctx context.Context, logger *logging.Logger, appDir, buildImage, runImage, repoName string, publish, clearCache bool) error {
+func Build(ctx context.Context, outWriter, errWriter io.Writer, appDir, buildImage, runImage, repoName string, publish, clearCache bool) error {
 	// TODO: Receive Cache as an argument of this function
 	dockerClient, err := docker.New()
 	if err != nil {
@@ -283,7 +278,12 @@ func Build(ctx context.Context, logger *logging.Logger, appDir, buildImage, runI
 		return err
 	}
 
-	bf, err := DefaultBuildFactory(logger, c, dockerClient)
+	imageFactory, err := image.NewFactory(image.WithOutWriter(outWriter))
+	if err != nil {
+		return err
+	}
+	logger := logging.NewLogger(outWriter, errWriter, true, false)
+	bf, err := DefaultBuildFactory(logger, c, dockerClient, imageFactory)
 	if err != nil {
 		return err
 	}
