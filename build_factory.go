@@ -322,6 +322,11 @@ func (b *BuildConfig) Run(ctx context.Context) error {
 		return err
 	}
 
+	b.Logger.Verbose(style.Step("CACHING"))
+	if err := b.Cacher(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -701,6 +706,40 @@ func (b *BuildConfig) Export(ctx context.Context) error {
 		b.Logger.VerboseErrorWriter().WithPrefix("exporter"),
 	); err != nil {
 		return errors.Wrap(err, "run export container")
+	}
+	return nil
+}
+
+func (b *BuildConfig) Cacher(ctx context.Context) error {
+	ctr, err := b.Cli.ContainerCreate(ctx, &container.Config{
+		User:   "root",
+		Image:  b.Builder,
+		Labels: map[string]string{"author": "pack"},
+		Cmd: []string{
+			"/lifecycle/cacher",
+			"-layers", launchDir,
+			"-group", groupPath,
+			"cache-image",
+		},
+	}, &container.HostConfig{
+		Binds: []string{
+			fmt.Sprintf("%s:%s:", b.Cache.Volume(), launchDir),
+			"/var/run/docker.sock:/var/run/docker.sock",
+		},
+	}, nil, "")
+
+	if err != nil {
+		return errors.Wrap(err, "create cache container")
+	}
+	defer containers.Remove(b.Cli, ctr.ID)
+
+	if err := b.Cli.RunContainer(
+		ctx,
+		ctr.ID,
+		b.Logger.VerboseWriter().WithPrefix("cacher"),
+		b.Logger.VerboseErrorWriter().WithPrefix("cacher"),
+	); err != nil {
+		return errors.Wrap(err, "run cacher container")
 	}
 	return nil
 }
