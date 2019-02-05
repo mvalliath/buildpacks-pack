@@ -302,7 +302,13 @@ func Build(ctx context.Context, logger *logging.Logger, appDir, buildImage, runI
 }
 
 func (b *BuildConfig) Run(ctx context.Context) error {
+	b.Logger.Verbose(style.Step("DETECTING"))
 	if err := b.Detect(ctx); err != nil {
+		return err
+	}
+
+	b.Logger.Verbose(style.Step("RESTORING"))
+	if err := b.Restore(ctx); err != nil {
 		return err
 	}
 
@@ -405,7 +411,6 @@ func (b *BuildConfig) Detect(ctx context.Context) error {
 	defer containers.Remove(b.Cli, ctr.ID)
 
 	var orderToml string
-	b.Logger.Verbose(style.Step("DETECTING"))
 	if len(b.Buildpacks) == 0 {
 		orderToml = "" // use order.toml already in image
 	} else {
@@ -740,6 +745,40 @@ func (b *BuildConfig) Cacher(ctx context.Context) error {
 		b.Logger.VerboseErrorWriter().WithPrefix("cacher"),
 	); err != nil {
 		return errors.Wrap(err, "run cacher container")
+	}
+	return nil
+}
+
+func (b *BuildConfig) Restore(ctx context.Context) error {
+	ctr, err := b.Cli.ContainerCreate(ctx, &container.Config{
+		User:   "root",
+		Image:  b.Builder,
+		Labels: map[string]string{"author": "pack"},
+		Cmd: []string{
+			"/lifecycle/restorer",
+			"-layers", launchDir,
+			"-group", groupPath,
+			"cache-image",
+		},
+	}, &container.HostConfig{
+		Binds: []string{
+			fmt.Sprintf("%s:%s:", b.Cache.Volume(), launchDir),
+			"/var/run/docker.sock:/var/run/docker.sock",
+		},
+	}, nil, "")
+
+	if err != nil {
+		return errors.Wrap(err, "create restore container")
+	}
+	defer containers.Remove(b.Cli, ctr.ID)
+
+	if err := b.Cli.RunContainer(
+		ctx,
+		ctr.ID,
+		b.Logger.VerboseWriter().WithPrefix("restorer"),
+		b.Logger.VerboseErrorWriter().WithPrefix("restorer"),
+	); err != nil {
+		return errors.Wrap(err, "run restorer container")
 	}
 	return nil
 }
