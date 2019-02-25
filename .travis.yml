@@ -19,13 +19,8 @@ install:
       "$PACK_PATH" version
 jobs:
   include:
-  - name: unit-tests
+  - name: tests
     os: linux
-    if: fork = true
-    script: go test -count=1 -parallel=1 -v ./...
-  - name: acceptance-tests
-    os: linux
-    if: fork = false
     script: go test -count=1 -parallel=1 -v ./... && go test -count=1 -parallel=1 -v -tags=acceptance ./acceptance/...
 
 deploy:
