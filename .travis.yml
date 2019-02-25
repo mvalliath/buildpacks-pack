@@ -19,16 +19,14 @@ install:
       "$PACK_PATH" version
 jobs:
   include:
-  - name: local-test
+  - name: unit-tests
     os: linux
     if: fork = true
     script: go test -count=1 -parallel=1 -v ./...
-  - &remote-test
-    os: osx
+  - name: acceptance-tests
+    os: linux
     if: fork = false
     script: go test -count=1 -parallel=1 -v ./... && go test -count=1 -parallel=1 -v -tags=acceptance ./acceptance/...
-  - <<: *remote-test
-    os: linux
 
 deploy:
   provider: gcs
