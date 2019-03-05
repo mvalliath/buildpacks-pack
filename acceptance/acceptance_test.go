@@ -124,6 +124,7 @@ func testAcceptance(t *testing.T, when spec.G, it spec.S) {
 			}
 			h.AssertNil(t, copyDirectory("testdata/node_app/.", sourceCodePath))
 		})
+
 		it.After(func() {
 			dockerCli.ContainerKill(context.TODO(), containerName, "SIGKILL")
 			dockerCli.ContainerRemove(context.TODO(), containerName, dockertypes.ContainerRemoveOptions{Force: true})
@@ -133,28 +134,120 @@ func testAcceptance(t *testing.T, when spec.G, it spec.S) {
 			}
 		})
 
-		when("'--publish' flag is not specified'", func() {
-			it("builds and exports an image", func() {
-				cmd := packCmd("build", repoName, "-p", sourceCodePath)
+		it("builds and exports an image to the daemon", func() {
+			cmd := packCmd("build", repoName, "-p", sourceCodePath)
+			output := h.Run(t, cmd)
+			h.AssertContains(t, output, fmt.Sprintf("Successfully built image '%s'", repoName))
+			runDockerImageExposePort(t, containerName, repoName)
+			launchPort := fetchHostPort(t, containerName)
+
+			waitForPort(t, launchPort, 10*time.Second)
+			h.AssertEq(t, h.HttpGet(t, "http://localhost:"+launchPort), "Buildpacks Worked! - 1000:1000")
+
+			t.Log("Checking that registry is empty")
+			contents, err := registryConfig.RegistryCatalog()
+			h.AssertNil(t, err)
+			if strings.Contains(contents, repo) {
+				t.Fatalf("Should not have published image without the '--publish' flag: got %s", contents)
+			}
+
+			t.Log("rebuild")
+			//TODO
+
+			t.Log("rebuild with --clear-cache")
+			//TODO
+		})
+
+		when("'--buildpack' flag is specified with a directory arguments", func() {
+			it("adds the buildpack to the builder and runs it", func() {
+				skipOnWindows(t, "buildpack directories not supported on windows")
+				cmd := packCmd(
+					"build", repoName,
+					"-p", filepath.Join("testdata", "mock_app"),
+					"--buildpack", filepath.Join("testdata", "mock_buildpacks", "first"),
+					"--buildpack", filepath.Join("testdata", "mock_buildpacks", "second"),
+				)
 				output := h.Run(t, cmd)
 				h.AssertContains(t, output, fmt.Sprintf("Successfully built image '%s'", repoName))
-				runDockerImageExposePort(t, containerName, repoName)
-				launchPort := fetchHostPort(t, containerName)
-
-				waitForPort(t, launchPort, 10*time.Second)
-				h.AssertEq(t, h.HttpGet(t, "http://localhost:"+launchPort), "Buildpacks Worked! - 1000:1000")
-
-				t.Log("Checking that registry is empty")
-				contents, err := registryConfig.RegistryCatalog()
-				h.AssertNil(t, err)
-				if strings.Contains(contents, repo) {
-					t.Fatalf("Should not have published image without the '--publish' flag: got %s", contents)
+				t.Log("it calls /bin/detect on the buildpacks")
+				if !strings.Contains(output, "First Mock Buildpack: pass") {
+					t.Fatalf(`Expected build output to contain detection output "%s", got "%s"`, "First Mock Buildpack: pass", output)
 				}
+				if !strings.Contains(output, "Second Mock Buildpack: pass") {
+					t.Fatalf(`Expected build output to contain detection output "%s", got "%s"`, "Second Mock Buildpack: pass", output)
+				}
+				t.Log("it calls /bin/build on the buildpacks")
+				if !strings.Contains(output, "---> First mock buildpack") {
+					t.Fatalf(`Expected build output to contain detection output "%s", got "%s"`, "---> First mock buildpack", output)
+				}
+				if !strings.Contains(output, "---> Second mock buildpack") {
+					t.Fatalf(`Expected build output to contain detection output "%s", got "%s"`,"---> Second mock buildpack", output)
+				}
+				t.Log("run app container")
+				runOutput := runDockerImageWithOutput(t, containerName, repoName)
+				if !strings.Contains(runOutput, "First Dep Contents") {
+					t.Fatalf(`Expected output to contain "First Dep Contents", got "%s"`, runOutput)
+				}
+			})
+
+			when("the buildpack stack doesn't match the builder", func() {
+				it.Pend("errors", func() {
+					skipOnWindows(t, "buildpack directories not supported on windows")
+					cmd := packCmd(
+						"build", repoName,
+						"-p", filepath.Join("testdata", "mock_app"),
+						"--buildpack", filepath.Join("testdata", "mock_buildpacks", "other-stack"),
+					)
+					txt, err := h.RunE(cmd)
+					h.AssertNotNil(t, err)
+					h.AssertContains(t, txt, "wrong stack")
+				})
+			})
+		})
+		//--buildpack flag with id arg is tested in create-builder test
+		//--builder flag is tested in create-builder test
+
+		when("'--env-file' flag is specified", func() {
+			var envPath string
+
+			it.Before(func() {
+				envfile, err := ioutil.TempFile("", "envfile")
+				h.AssertNil(t, err)
+				err = os.Setenv("VAR3", "value from env")
+				h.AssertNil(t, err)
+				envfile.WriteString(`
+VAR1=value1
+VAR2=value2
+VAR3
+`)
+				envPath = envfile.Name()
+			})
+
+			it.After(func() {
+				h.AssertNil(t, os.Unsetenv("VAR3"))
+				h.AssertNil(t, os.RemoveAll(envPath))
+			})
+
+			it("provides the env vars to the build and detect steps", func() {
+				cmd := packCmd(
+					"build", repoName,
+					"-p", filepath.Join("testdata", "mock_app"),
+					"--env-file", envPath,
+					"--buildpack", filepath.Join("testdata", "mock_buildpacks", "printenv"),
+				)
+				output := h.Run(t, cmd)
+				h.AssertContains(t, output, fmt.Sprintf("Successfully built image '%s'", repoName))
+				h.AssertContains(t, output, "DETECT: VAR1 is value1;")
+				h.AssertContains(t, output, "DETECT: VAR2 is value2;")
+				h.AssertContains(t, output, "DETECT: VAR3 is value from env;")
+				h.AssertContains(t, output, "BUILD: VAR1 is value1;")
+				h.AssertContains(t, output, "BUILD: VAR2 is value2;")
+				h.AssertContains(t, output, "BUILD: VAR3 is value from env;")
 			})
 		})
 
 		when("'--publish' flag is specified", func() {
-			it("builds and exports an image", func() {
+			it("builds and exports an image to the registry", func() {
 				runPackBuild := func() string {
 					t.Helper()
 					cmd := packCmd("build", repoName, "-p", sourceCodePath, "--publish")

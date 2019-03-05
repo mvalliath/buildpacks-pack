@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -277,179 +276,6 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 				})
 			})
 		})
-
-		when("previous image exists", func() {
-			var dockerFile string
-			it.Before(func() {
-				dockerFile = fmt.Sprintf(`
-					FROM busybox
-					LABEL io.buildpacks.lifecycle.metadata='{"buildpacks":[{"key":"io.buildpacks.samples.nodejs","layers":{"node_modules":{"launch": true, "sha":"sha256:99311ec03d790adf46d35cd9219ed80a7d9a4b97f761247c02c77e7158a041d5","data":{"lock_checksum":"eb04ed1b461f1812f0f4233ef997cdb5"}}}}]}'
-					LABEL repo_name_for_randomisation=%s
-				`, subject.RepoName)
-			})
-
-			when("publish", func() {
-				it.Before(func() {
-					subject.Publish = true
-					subject.RepoName = h.CreateImageOnRemote(t, dockerCli, integrationRegistryConfig, subject.RepoName, dockerFile)
-				})
-
-				it("places files in workspace and sets owner to pack", func() {
-					h.AssertNil(t, subject.Analyze(ctx, lifecycle))
-
-					txt := h.ReadFromDocker(t, lifecycle.WorkspaceVolume, "/workspace/io.buildpacks.samples.nodejs/node_modules.toml")
-
-					h.AssertEq(t, txt, `build = false
-launch = true
-cache = false
-
-[metadata]
-  lock_checksum = "eb04ed1b461f1812f0f4233ef997cdb5"
-`)
-					hdr := h.StatFromDocker(t, lifecycle.WorkspaceVolume, "/workspace/io.buildpacks.samples.nodejs/node_modules.toml")
-					h.AssertEq(t, hdr.Uid, 1000)
-					h.AssertEq(t, hdr.Gid, 1000)
-				})
-			})
-
-			when("daemon", func() {
-				it.Before(func() {
-					subject.Publish = false
-
-					h.CreateImageOnLocal(t, dockerCli, subject.RepoName, dockerFile)
-				})
-
-				it.After(func() {
-					h.AssertNil(t, h.DockerRmi(dockerCli, subject.RepoName))
-				})
-
-				it("places files in workspace and sets owner to pack", func() {
-					err := subject.Analyze(ctx, lifecycle)
-					h.AssertNil(t, err)
-
-					txt := h.ReadFromDocker(t, lifecycle.WorkspaceVolume, "/workspace/io.buildpacks.samples.nodejs/node_modules.toml")
-					h.AssertEq(t, txt, `build = false
-launch = true
-cache = false
-
-[metadata]
-  lock_checksum = "eb04ed1b461f1812f0f4233ef997cdb5"
-`)
-					hdr := h.StatFromDocker(t, lifecycle.WorkspaceVolume, "/workspace/io.buildpacks.samples.nodejs/node_modules.toml")
-					h.AssertEq(t, hdr.Uid, 1000)
-					h.AssertEq(t, hdr.Gid, 1000)
-				})
-			})
-		})
-	}, spec.Sequential())
-
-	when("#Build", func() {
-		it.Before(func() {
-			var err error
-
-			logger = logging.NewLogger(&outBuf, &errBuf, true, false)
-			dockerCli, err = docker.New()
-			h.AssertNil(t, err)
-			repoName := "pack.build." + h.RandString(10)
-			buildCache, err := cache.New(repoName, dockerCli)
-			defaultBuilderName = h.DefaultBuilderImage(t, integrationRegistryConfig.RunRegistryPort)
-			subject = &pack.BuildConfig{
-				Builder:  defaultBuilderName,
-				RunImage: h.DefaultRunImage(t, integrationRegistryConfig.RunRegistryPort),
-				RepoName: repoName,
-				Publish:  false,
-				Cache:    buildCache,
-				Logger:   logger,
-				FS:       &fs.FS{},
-				Cli:      dockerCli,
-				LifecycleConfig: build.LifecycleConfig{
-					BuilderImage: defaultBuilderName,
-					Logger:       logger,
-					AppDir:       "../acceptance/testdata/node_app",
-				},
-			}
-		})
-
-		when("buildpacks are specified", func() {
-			when("directory buildpack", func() {
-				var bpDir string
-				it.Before(func() {
-					var err error
-					bpDir, err = ioutil.TempDir("", "pack.build.bpdir.")
-					h.AssertNil(t, err)
-					h.AssertNil(t, ioutil.WriteFile(filepath.Join(bpDir, "buildpack.toml"), []byte(`
-					[buildpack]
-					id = "com.example.mybuildpack"
-					version = "1.2.3"
-					name = "My Sample Buildpack"
-
-					[[stacks]]
-					id = "io.buildpacks.stacks.bionic"
-					`), 0666))
-					h.AssertNil(t, os.MkdirAll(filepath.Join(bpDir, "bin"), 0777))
-					h.AssertNil(t, ioutil.WriteFile(filepath.Join(bpDir, "bin", "detect"), []byte(`#!/usr/bin/env bash
-					exit 0
-					`), 0777))
-					h.AssertNil(t, ioutil.WriteFile(filepath.Join(bpDir, "bin", "build"), []byte(`#!/usr/bin/env bash
-					echo "BUILD OUTPUT FROM MY SAMPLE BUILDPACK"
-					exit 0
-					`), 0777))
-				})
-
-				it.After(func() {
-					os.RemoveAll(bpDir)
-				})
-
-				it("runs the buildpacks bin/build", func() {
-					if runtime.GOOS == "windows" {
-						t.Skip("directory buildpacks are not implemented on windows")
-					}
-					subject.LifecycleConfig.Buildpacks = []string{bpDir}
-					lifecycle, err := build.NewLifecycle(subject.LifecycleConfig)
-					h.AssertNil(t, err)
-					defer lifecycle.Cleanup(ctx)
-
-					h.AssertNil(t, subject.Detect(ctx, lifecycle))
-					h.AssertNil(t, subject.Build(ctx, lifecycle))
-
-					h.AssertContains(t, outBuf.String(), "BUILD OUTPUT FROM MY SAMPLE BUILDPACK")
-				})
-			})
-			when("id@version buildpack", func() {
-				it("runs the buildpacks bin/build", func() {
-					subject.LifecycleConfig.Buildpacks = []string{"io.buildpacks.samples.nodejs@latest"}
-					lifecycle, err := build.NewLifecycle(subject.LifecycleConfig)
-					h.AssertNil(t, err)
-					defer lifecycle.Cleanup(ctx)
-
-					h.AssertNil(t, subject.Detect(ctx, lifecycle))
-					h.AssertNil(t, subject.Build(ctx, lifecycle))
-
-					h.AssertContains(t, outBuf.String(), "Sample Node.js Buildpack: pass")
-				})
-			})
-		})
-
-		when("EnvFile is specified", func() {
-			it("sets specified env variables in /platform/env/...", func() {
-				if runtime.GOOS == "windows" {
-					t.Skip("directory buildpacks are not implemented on windows")
-				}
-				subject.LifecycleConfig.EnvFile = map[string]string{
-					"VAR1": "value1",
-					"VAR2": "value2 with spaces",
-				}
-				subject.LifecycleConfig.Buildpacks = []string{"../acceptance/testdata/mock_buildpacks/printenv"}
-				lifecycle, err := build.NewLifecycle(subject.LifecycleConfig)
-				h.AssertNil(t, err)
-				defer lifecycle.Cleanup(ctx)
-
-				h.AssertNil(t, subject.Detect(ctx, lifecycle))
-				h.AssertNil(t, subject.Build(ctx, lifecycle))
-				h.AssertContains(t, outBuf.String(), "BUILD: VAR1 is value1;")
-				h.AssertContains(t, outBuf.String(), "BUILD: VAR2 is value2 with spaces;")
-			})
-		})
 	}, spec.Sequential())
 
 	when("#Export", func() {
@@ -534,13 +360,6 @@ cache = false
 				}
 			})
 
-			it("creates the image on the registry", func() {
-				h.AssertNil(t, subject.Export(ctx, lifecycle))
-				images, err := integrationRegistryConfig.RegistryCatalog()
-				h.AssertNil(t, err)
-				h.AssertContains(t, images, oldRepoName)
-			})
-
 			it("puts the files on the image", func() {
 				h.AssertNil(t, subject.Export(ctx, lifecycle))
 
@@ -621,12 +440,6 @@ cache = false
 				h.AssertNil(t, h.DockerRmi(dockerCli, subject.RepoName))
 			})
 
-			it("creates the image on the daemon", func() {
-				h.AssertNil(t, subject.Export(ctx, lifecycle))
-				images := imageList(t, dockerCli)
-				h.AssertSliceContains(t, images, subject.RepoName+":latest")
-			})
-
 			it("puts the files on the image", func() {
 				h.AssertNil(t, subject.Export(ctx, lifecycle))
 
@@ -683,38 +496,6 @@ cache = false
 
 					runImageLabel := imageLabel(t, dockerCli, subject.RepoName, "io.buildpacks.run-image")
 					h.AssertEq(t, runImageLabel, h.DefaultRunImage(t, integrationRegistryConfig.RunRegistryPort))
-				})
-			})
-
-			when("PACK_USER_ID and PACK_GROUP_ID are set on builder", func() {
-				var lifecycle2 *build.Lifecycle
-
-				it.Before(func() {
-					subject.LifecycleConfig.BuilderImage = "packs/samples-" + h.RandString(8)
-					h.CreateImageOnLocal(t, dockerCli, subject.LifecycleConfig.BuilderImage, fmt.Sprintf(`
-						FROM %s
-						ENV PACK_USER_ID 1234
-						ENV PACK_GROUP_ID 5678
-						LABEL repo_name_for_randomisation=%s
-					`, h.DefaultBuilderImage(t, integrationRegistryConfig.RunRegistryPort), subject.LifecycleConfig.BuilderImage))
-					var err error
-					lifecycle2, err = build.NewLifecycle(subject.LifecycleConfig)
-					h.AssertNil(t, err)
-
-					// We need to carry over the workspace volume for our original lifecycle that is
-					// setup in the #Export before each block. This is because export needs files
-					// created by previous phases to exist.
-					lifecycle2.WorkspaceVolume = lifecycle.WorkspaceVolume
-				})
-
-				it.After(func() {
-					h.AssertNil(t, lifecycle2.Cleanup(ctx))
-				})
-
-				it("sets owner of layer files to PACK_USER_ID:PACK_GROUP_ID", func() {
-					h.AssertNil(t, subject.Export(ctx, lifecycle2))
-					txt := h.RunInImage(t, dockerCli, nil, subject.RepoName, "ls", "-la", "/workspace/app/file.txt")
-					h.AssertContains(t, txt, " 1234 5678 ")
 				})
 			})
 

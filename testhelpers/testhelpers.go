@@ -464,12 +464,9 @@ func CleanDefaultImages(t *testing.T, registryPort string) {
 }
 
 func RunE(cmd *exec.Cmd) (string, error) {
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("Failed to execute command: %v, %s, %s, %s", cmd.Args, err, stderr.String(), output)
+		return string(output), fmt.Errorf("Failed to execute command: %v, %s, %s", cmd.Args, err, output)
 	}
 
 	return string(output), nil
