@@ -21,7 +21,7 @@ import (
 	"github.com/buildpack/pack/logging"
 	"github.com/buildpack/pack/style"
 
-	lcimg "github.com/buildpack/lifecycle/image"
+	"github.com/buildpack/lifecycle/image"
 	"github.com/docker/docker/api/types/container"
 	"github.com/pkg/errors"
 )
@@ -68,6 +68,8 @@ type BuildConfig struct {
 	// Above are copied from BuildFactory
 	Cache           Cache
 	LifecycleConfig build.LifecycleConfig
+
+	PrevCacheImage image.Image
 }
 
 const (
@@ -123,7 +125,7 @@ func calculateRepositoryName(appDir string, buildFlags *BuildFlags) string {
 }
 
 func (bf *BuildFactory) BuildConfigFromFlags(ctx context.Context, f *BuildFlags) (*BuildConfig, error) {
-	var builderImage lcimg.Image
+	var builderImage image.Image
 	var err error
 
 	if f.AppDir == "" {
@@ -140,14 +142,27 @@ func (bf *BuildFactory) BuildConfigFromFlags(ctx context.Context, f *BuildFlags)
 
 	f.RepoName = calculateRepositoryName(appDir, f)
 
+	img, err := bf.Fetcher.FetchLocalImage(bf.Cache.Image())
+	if err != nil {
+		return nil, err
+	}
+
+	if digest, err := img.Digest(); err != nil {
+		bf.Logger.Info("***ERR!")
+		return nil, err
+	} else {
+		bf.Logger.Info("DIGEST %s, NAME %s", digest, img.Name())
+	}
+
 	b := &BuildConfig{
-		RepoName:   f.RepoName,
-		Publish:    f.Publish,
-		ClearCache: f.ClearCache,
-		Cli:        bf.Cli,
-		Logger:     bf.Logger,
-		FS:         bf.FS,
-		Config:     bf.Config,
+		RepoName:       f.RepoName,
+		Publish:        f.Publish,
+		ClearCache:     f.ClearCache,
+		Cli:            bf.Cli,
+		Logger:         bf.Logger,
+		FS:             bf.FS,
+		Config:         bf.Config,
+		PrevCacheImage: img,
 	}
 
 	var envFile map[string]string
@@ -208,7 +223,7 @@ func (bf *BuildFactory) BuildConfigFromFlags(ctx context.Context, f *BuildFlags)
 		b.Logger.Verbose("Selected run image %s from builder %s", style.Symbol(b.RunImage), style.Symbol(b.Builder))
 	}
 
-	var runImage lcimg.Image
+	var runImage image.Image
 	if f.Publish {
 		runImage, err = bf.Fetcher.FetchRemoteImage(b.RunImage)
 		if err != nil {
@@ -265,7 +280,7 @@ func Build(ctx context.Context, outWriter, errWriter io.Writer, appDir, buildIma
 	if err != nil {
 		return err
 	}
-	imageFactory, err := lcimg.NewFactory(lcimg.WithOutWriter(outWriter))
+	imageFactory, err := image.NewFactory(image.WithOutWriter(outWriter))
 	if err != nil {
 		return err
 	}
@@ -498,12 +513,24 @@ func (b *BuildConfig) export(ctx context.Context, lifecycle *build.Lifecycle) er
 }
 
 func (b *BuildConfig) cache(ctx context.Context, lifecycle *build.Lifecycle) error {
+	if found, err := b.PrevCacheImage.Found(); err != nil {
+		return err
+	} else if found {
+		digest, err2 := b.PrevCacheImage.Digest()
+		if err2 != nil {
+			b.Logger.Info("***** MAYDAY!")
+			return err2
+		}
+		b.Logger.Info("Cache image ID before is: %s", style.Symbol(digest))
+	} else {
+		b.Logger.Info("No previous cache image")
+	}
+
 	phase, err := lifecycle.NewPhase(
 		"cacher",
 		build.WithArgs("-image="+b.Cache.Image()),
 		build.WithDaemonAccess(),
 	)
-
 	if err != nil {
 		return err
 	}
