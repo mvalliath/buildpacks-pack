@@ -52,7 +52,7 @@ func testBuildFactory(t *testing.T, when spec.G, it spec.S) {
 			factory = &pack.BuildFactory{
 				Fetcher: mockFetcher,
 				Config: &config.Config{
-					DefaultBuilder: "some/builder",
+					DefaultBuilderImage: "some/builder",
 				},
 				Logger: logger,
 				Cache:  mockCache,
