@@ -79,7 +79,7 @@ func testBuildFactory(t *testing.T, when spec.G, it spec.S) {
 				Builder:  "",
 			})
 			h.AssertNil(t, err)
-			h.AssertEq(t, config.RunImage, "some/run")
+			h.AssertEq(t, config.RunImage, "xxxxsome/run")
 			h.AssertEq(t, config.LocallyConfiguredRunImage, false)
 			h.AssertEq(t, config.Builder, "some/builder")
 		})
