@@ -99,7 +99,7 @@ func (f *BuilderFactory) Create(config BuilderConfig) error {
 
 	orderTar, err := f.orderLayer(tmpDir, config.Groups)
 	if err != nil {
-		return fmt.Errorf(`failed generate order.toml layer: %s`, err)
+		return fmt.Errorf(`failed to generate order.toml layer: %s`, err)
 	}
 	if err := config.Repo.AddLayer(orderTar); err != nil {
 		return fmt.Errorf(`failed append order.toml layer to image: %s`, err)
@@ -147,6 +147,18 @@ func (f *BuilderFactory) Create(config BuilderConfig) error {
 		return fmt.Errorf("failed to set metadata label: %s", err)
 	}
 
+	mirrorsTar, err := f.mirrorsLayer(tmpDir, config.RunImage, config.RunImageMirrors)
+	if err != nil {
+		return fmt.Errorf(`failed to generate mirrors.toml layer: %s`, err)
+	}
+	if err := config.Repo.AddLayer(mirrorsTar); err != nil {
+		return fmt.Errorf(`failed to append mirrors.toml layer to image: %s`, err)
+	}
+
+	if err := config.Repo.SetEnv("CNB_MIRRORS_PATH", filepath.Join("/buildpacks", "mirrors.toml")); err != nil {
+		return err
+	}
+
 	if _, err := config.Repo.Save(); err != nil {
 		return err
 	}
@@ -178,6 +190,37 @@ func (f *BuilderFactory) orderLayer(dest string, groups []lifecycle.BuildpackGro
 	if err := archive.CreateTar(layerTar, bpDir, "/buildpacks", 0, 0); err != nil {
 		return "", err
 	}
+	return layerTar, nil
+}
+
+func (f *BuilderFactory) mirrorsLayer(dest string, runImage string, mirrors []string) (layerTar string, err error) {
+	bpDir := filepath.Join(dest, "buildpacks")
+	if err := os.MkdirAll(bpDir, 0755); err != nil {
+		return "", err
+	}
+
+	mirrorsFile, err := os.OpenFile(filepath.Join(bpDir, "mirrors.toml"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return "", err
+	}
+	defer mirrorsFile.Close()
+
+	content := struct {
+		Image   string   `toml:"image"`
+		Mirrors []string `toml:"mirrors"`
+	}{
+		Image:   runImage,
+		Mirrors: mirrors,
+	}
+	if err = toml.NewEncoder(mirrorsFile).Encode(&content); err != nil {
+		return "", err
+	}
+
+	layerTar = filepath.Join(dest, "mirrors.tar")
+	if err := archive.CreateTar(layerTar, bpDir, "/buildpacks", 0, 0); err != nil {
+		return "", err
+	}
+
 	return layerTar, nil
 }
 
