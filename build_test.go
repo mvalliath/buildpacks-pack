@@ -305,7 +305,7 @@ func testBuildFactory(t *testing.T, when spec.G, it spec.S) {
 
 		it("sets Env", func() {
 			mockBuilderImage := mocks.NewMockImage(mockController)
-			mockBuilderImage.EXPECT().Label("io.buildpacks.builder.metadata").Return(`{"runImage": {"image": "some/run"}}`, nil).AnyTimes()
+			mockBuilderImage.EXPECT().Label("io.buildpacks.builder.metadata").Return(`{"stack":{"runImage": {"image": "some/run"}}}`, nil).AnyTimes()
 			mockFetcher.EXPECT().FetchUpdatedLocalImage(gomock.Any(), "some/builder", gomock.Any()).Return(mockBuilderImage, nil)
 
 			mockRunImage := mocks.NewMockImage(mockController)
@@ -367,7 +367,7 @@ PATH
 
 		it("sets EnvFile with Env overrides", func() {
 			mockBuilderImage := mocks.NewMockImage(mockController)
-			mockBuilderImage.EXPECT().Label("io.buildpacks.builder.metadata").Return(`{"runImage": {"image": "some/run"}}`, nil).AnyTimes()
+			mockBuilderImage.EXPECT().Label("io.buildpacks.builder.metadata").Return(`{"stack":{"runImage": {"image": "some/run"}}}`, nil).AnyTimes()
 			mockFetcher.EXPECT().FetchUpdatedLocalImage(gomock.Any(), "some/builder", gomock.Any()).Return(mockBuilderImage, nil)
 
 			mockRunImage := mocks.NewMockImage(mockController)
