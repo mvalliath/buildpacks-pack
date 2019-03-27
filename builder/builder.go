@@ -60,7 +60,7 @@ func (b *Builder) GetLocalRunImageMirrors() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if runImage := b.config.GetRunImage(metadata.RunImage.Image); runImage != nil {
+	if runImage := b.config.GetRunImage(metadata.Stack.RunImage.Image); runImage != nil {
 		return runImage.Mirrors, nil
 	}
 	return []string{}, nil
@@ -82,7 +82,7 @@ func (b *Builder) GetRunImageByRepoName(repoName string) (runImage string, err e
 		return "", err
 	}
 
-	runImageList := append(localRunImageMirrors, append([]string{metadata.RunImage.Image}, metadata.RunImage.Mirrors...)...)
+	runImageList := append(localRunImageMirrors, append([]string{metadata.Stack.RunImage.Image}, metadata.Stack.RunImage.Mirrors...)...)
 	for _, img := range runImageList {
 		if reg, err := registry(img); err == nil && reg == desiredRegistry {
 			return img, nil
@@ -93,7 +93,7 @@ func (b *Builder) GetRunImageByRepoName(repoName string) (runImage string, err e
 		return localRunImageMirrors[0], nil
 	}
 
-	return metadata.RunImage.Image, nil
+	return metadata.Stack.RunImage.Image, nil
 }
 
 func registry(imageName string) (string, error) {

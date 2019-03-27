@@ -143,7 +143,7 @@ func testAcceptance(t *testing.T, when spec.G, it spec.S) {
 				h.Run(t, packCmd("set-default-builder", h.DefaultBuilderImage(t, registryConfig.RunRegistryPort)))
 			})
 
-			it("creates image on the daemon", func() {
+			it.Focus("creates image on the daemon", func() {
 				t.Log("no previous image exists")
 				cmd := packCmd("build", repoName, "-p", "testdata/node_app/.")
 				output := h.Run(t, cmd)

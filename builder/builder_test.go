@@ -98,12 +98,8 @@ func testBuilder(t *testing.T, when spec.G, it spec.S) {
 	when("#GetLocalRunImageMirrors", func() {
 		when("run image exists in config", func() {
 			it.Before(func() {
-				mockImage.EXPECT().Label("io.buildpacks.builder.metadata").Return(`{
- "runImage": {
-   "image": "some/run-image",
-   "mirrors": []
- }
-}`, nil)
+				mockImage.EXPECT().Label("io.buildpacks.builder.metadata").
+					Return(`{"stack":{"runImage": {"image": "some/run-image","mirrors": []}}}`, nil)
 				cfg.RunImages = []config.RunImage{{Image: "some/run-image", Mirrors: []string{"a", "b"}}}
 			})
 
@@ -137,12 +133,8 @@ func testBuilder(t *testing.T, when spec.G, it spec.S) {
 	when("#GetRunImageByRepoName", func() {
 		when("there are NOT local run image mirrors", func() {
 			it("should return the remote run image for the repo", func() {
-				mockImage.EXPECT().Label(builder.MetadataLabel).Return(`{
- "runImage": {
-   "image": "some/run-image",
-   "mirrors": ["foo.bar/other/run-image", "gcr.io/extra/run-image"]
- }
-}`, nil).AnyTimes()
+				mockImage.EXPECT().Label(builder.MetadataLabel).
+					Return(`{"stack":{"runImage": {"image": "some/run-image","mirrors": ["foo.bar/other/run-image", "gcr.io/extra/run-image"]}}}`, nil).AnyTimes()
 
 				runImage, err := subject.GetRunImageByRepoName("gcr.io/foo/bar")
 				h.AssertNil(t, err)
@@ -153,12 +145,8 @@ func testBuilder(t *testing.T, when spec.G, it spec.S) {
 		when("there are local run image mirrors", func() {
 			it.Before(func() {
 				cfg.RunImages = []config.RunImage{{Image: "some/run-image", Mirrors: []string{"gcr.io/another/run-image", "foo.bar/ignored"}}}
-				mockImage.EXPECT().Label(builder.MetadataLabel).Return(`{
- "runImage": {
-   "image": "some/run-image",
-   "mirrors": ["foo.bar/other/run-image", "gcr.io/extra/run-image"]
- }
-}`, nil).AnyTimes()
+				mockImage.EXPECT().Label(builder.MetadataLabel).
+					Return(`{"stack":{"runImage": {"image": "some/run-image","mirrors": ["foo.bar/other/run-image", "gcr.io/extra/run-image"]}}}`, nil).AnyTimes()
 			})
 
 			when("one matches the given repo", func() {

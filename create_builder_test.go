@@ -449,24 +449,25 @@ run-image = "some/run"
 				h.AssertNil(t, factory.Create(builderConfig))
 				h.AssertEq(t,
 					labels["io.buildpacks.builder.metadata"],
-					`{"runImage":{"image":"myorg/run","mirrors":["gcr.io/myorg/run"]},"buildpacks":[],"groups":[]}`,
+					`{"buildpacks":[],"groups":[],"stack":{"runImage":{"image":"myorg/run","mirrors":["gcr.io/myorg/run"]}}}`,
 				)
 			})
 
-			it("writes a mirrors.toml file", func() {
+			it("writes a stack.toml file", func() {
 				h.AssertNil(t, factory.Create(builderConfig))
 
-				content, exists := savedLayers["mirrors.tar"]
+				content, exists := savedLayers["stack.tar"]
 				h.AssertEq(t, exists, true)
+				h.AssertContains(t, content.String(), `[run-image]`)
 				h.AssertContains(t, content.String(), `image = "myorg/run"`)
 				h.AssertContains(t, content.String(), `mirrors = ["gcr.io/myorg/run"]`)
 			})
 
-			it("writes the mirrors.toml file path to an env var", func() {
+			it("writes the stack.toml file path to an env var", func() {
 				h.AssertNil(t, factory.Create(builderConfig))
-				content, exists := env["CNB_MIRRORS_PATH"]
+				content, exists := env["CNB_STACK_PATH"]
 				h.AssertEq(t, exists, true)
-				h.AssertContains(t, content, "/buildpacks/mirrors.toml")
+				h.AssertContains(t, content, "/buildpacks/stack.toml")
 			})
 
 			when("builder config contains buildpacks", func() {
@@ -480,7 +481,7 @@ run-image = "some/run"
 					h.AssertNil(t, factory.Create(builderConfig))
 					h.AssertEq(t,
 						labels["io.buildpacks.builder.metadata"],
-						`{"runImage":{"image":"myorg/run","mirrors":["gcr.io/myorg/run"]},"buildpacks":[{"id":"some-buildpack-id","version":"some-buildpack-version","latest":true}],"groups":[]}`,
+						`{"buildpacks":[{"id":"some-buildpack-id","version":"some-buildpack-version","latest":true}],"groups":[],"stack":{"runImage":{"image":"myorg/run","mirrors":["gcr.io/myorg/run"]}}}`,
 					)
 				})
 			})
@@ -504,7 +505,7 @@ run-image = "some/run"
 					h.AssertNil(t, factory.Create(builderConfig))
 					h.AssertEq(t,
 						labels["io.buildpacks.builder.metadata"],
-						`{"runImage":{"image":"myorg/run","mirrors":["gcr.io/myorg/run"]},"buildpacks":[],"groups":[{"buildpacks":[{"id":"bpId","version":"bpVersion","latest":false}]}]}`,
+						`{"buildpacks":[],"groups":[{"buildpacks":[{"id":"bpId","version":"bpVersion","latest":false}]}],"stack":{"runImage":{"image":"myorg/run","mirrors":["gcr.io/myorg/run"]}}}`,
 					)
 				})
 			})
