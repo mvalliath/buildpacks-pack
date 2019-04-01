@@ -143,9 +143,10 @@ func testBuildpackFetcher(t *testing.T, when spec.G, it spec.S) {
 		it("fetches from a 'http(s)://' URI tgz", func() {
 			server := ghttp.NewServer()
 			server.AppendHandlers(func(w http.ResponseWriter, r *http.Request) {
-				path := filepath.Join("testdata")
+				path := filepath.Join("testdata", r.URL.Path)
 				http.ServeFile(w, r, path)
 			})
+			defer server.Close()
 
 			tmpDir, err := ioutil.TempDir("", "")
 			h.AssertNil(t, err)
@@ -153,7 +154,7 @@ func testBuildpackFetcher(t *testing.T, when spec.G, it spec.S) {
 
 			bp := buildpack.Buildpack{
 				ID:  "bp.one",
-				URI: "http://buildpack.tgz",
+				URI: server.URL() + "/buildpack.tgz",
 			}
 			h.AssertNil(t, subject.FetchBuildpack(".", &bp))
 			h.AssertNotEq(t, bp.Dir, "")

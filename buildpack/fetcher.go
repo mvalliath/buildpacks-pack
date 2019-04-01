@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 )
 
-// TODO : test this by itself, currently it is tested in create_builder_test.go
 // TODO : attempt to use this during build with the --buildpack flag to get tar.gz buildpacks
 // TODO : think of a better name for this construct
 // TODO : probably don't need a config here
@@ -31,7 +30,6 @@ func NewFetcher(cfg *config.Config, logger *logging.Logger) *Fetcher {
 	}
 }
 
-// TODO : pass builder dir (local buildpack search dir) into the constructor ???
 // TODO : bp should be builder.BuildpackMetadata and this should fetch buildpack.Metadata
 func (f *Fetcher) FetchBuildpack(builderDir string, bp *Buildpack) error {
 	asURL, err := url.Parse(bp.URI)
@@ -85,7 +83,6 @@ func (f *Fetcher) FetchBuildpack(builderDir string, bp *Buildpack) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed to download from %q", bp.URI)
 		} else if reader == nil {
-			// can use cached content
 			bp.Dir = cachedDir
 			break
 		}
@@ -120,10 +117,10 @@ func (f *Fetcher) downloadAsStream(uri string, etag string) (io.ReadCloser, stri
 		return nil, "", err
 	} else {
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-			f.Logger.Verbose("Downloading from %q\n", uri)
+			//f.Logger.Verbose("Downloading from %q\n", uri)
 			return resp.Body, resp.Header.Get("Etag"), nil
 		} else if resp.StatusCode == 304 {
-			f.Logger.Verbose("Using cached version of %q\n", uri)
+			//f.Logger.Verbose("Using cached version of %q\n", uri)
 			return nil, etag, nil
 		} else {
 			return nil, "", fmt.Errorf("could not download from %q, code http status %d", uri, resp.StatusCode)
