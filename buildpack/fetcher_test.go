@@ -13,8 +13,6 @@ import (
 	"github.com/sclevine/spec"
 	"github.com/sclevine/spec/report"
 
-	"github.com/buildpack/pack/config"
-
 	"github.com/buildpack/pack/buildpack"
 	h "github.com/buildpack/pack/testhelpers"
 )
@@ -28,14 +26,28 @@ func TestBuildpackFetcher(t *testing.T) {
 	spec.Run(t, "BuildpackFetcher", testBuildpackFetcher, spec.Parallel(), spec.Report(report.Terminal{}))
 }
 
+type emptyLogger struct {
+}
+
+func (e *emptyLogger) Verbose(format string, a ...interface{}) {
+}
+
 func testBuildpackFetcher(t *testing.T, when spec.G, it spec.S) {
 	when("#FetchBuildpack", func() {
 		var (
-			subject *buildpack.Fetcher
+			cacheDir string
+			subject  *buildpack.Fetcher
 		)
 
 		it.Before(func() {
-			subject = buildpack.NewFetcher(&config.Config{}, nil)
+			cacheDir, err := ioutil.TempDir("", "")
+			h.AssertNil(t, err)
+
+			subject = buildpack.NewFetcher(&emptyLogger{}, cacheDir)
+		})
+
+		it.After(func() {
+			os.RemoveAll(cacheDir)
 		})
 
 		it("fetches from a relative directory", func() {

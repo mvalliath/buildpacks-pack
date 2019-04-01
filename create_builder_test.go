@@ -204,6 +204,7 @@ build-image = "packs/build:v3alpha2"
 				h.AssertError(t, err, "stack.run-image is required")
 			})
 
+			// TODO : remove once comfortable with buildpack/fetcher.go
 			when("a buildpack location uses no scheme uris", func() {
 				it("supports relative directories as well as archives", func() {
 					mockImage := mocks.NewMockImage(mockController)
@@ -275,6 +276,7 @@ run-image = "some/run"
 				})
 			})
 
+			// TODO : remove once comfortable with buildpack/fetcher.go
 			when("a buildpack location uses file:// uris", func() {
 				it("supports absolute directories as well as archives", func() {
 					mockImage := mocks.NewMockImage(mockController)
@@ -327,6 +329,7 @@ run-image = "some/run"
 				})
 			})
 
+			// TODO : remove once comfortable with buildpack/fetcher.go
 			when("a buildpack location uses http(s):// uris", func() {
 				var (
 					server *http.Server
@@ -540,18 +543,21 @@ func checkGroups(t *testing.T, groups []lifecycle.BuildpackGroup) {
 func checkBuildpacks(t *testing.T, buildpacks []buildpack.Buildpack) {
 	if diff := cmp.Diff(buildpacks, []buildpack.Buildpack{
 		{
-			ID:  "some.bp1",
-			Dir: filepath.Join("testdata", "some-path-1"),
-			// Latest will default to false
+			ID:     "some.bp1",
+			Dir:    filepath.Join("testdata", "some-path-1"),
+			URI:    "some-path-1",
+			Latest: false,
 		},
 		{
 			ID:     "some/bp2",
 			Dir:    filepath.Join("testdata", "some-path-2"),
+			URI:    "some-path-2",
 			Latest: false,
 		},
 		{
 			ID:     "some/bp2",
 			Dir:    filepath.Join("testdata", "some-latest-path-2"),
+			URI:    "some-latest-path-2",
 			Latest: true,
 		},
 	}); diff != "" {
