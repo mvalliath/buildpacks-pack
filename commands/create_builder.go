@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/buildpack/pack/buildpack"
 	"runtime"
 
 	"github.com/spf13/cobra"
@@ -30,9 +31,10 @@ func CreateBuilder(logger *logging.Logger, fetcher pack.Fetcher) *cobra.Command 
 				return err
 			}
 			builderFactory := pack.BuilderFactory{
-				Logger:  logger,
-				Config:  cfg,
-				Fetcher: fetcher,
+				Logger:           logger,
+				Config:           cfg,
+				Fetcher:          fetcher,
+				BuildpackFetcher: buildpack.NewFetcher(logger, cfg.Path()),
 			}
 			builderConfig, err := builderFactory.BuilderConfigFromFlags(ctx, flags)
 			if err != nil {
