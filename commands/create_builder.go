@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"runtime"
 
 	"github.com/spf13/cobra"
 
@@ -21,9 +20,9 @@ func CreateBuilder(logger *logging.Logger, fetcher pack.Fetcher, bpFetcher pack.
 		Short: "Create builder image",
 		RunE: logError(logger, func(cmd *cobra.Command, args []string) error {
 			flags.RepoName = args[0]
-			if runtime.GOOS == "windows" {
-				return fmt.Errorf("%s is not implemented on Windows", style.Symbol("create-builder"))
-			}
+			// if runtime.GOOS == "windows" {
+			// 	return fmt.Errorf("%s is not implemented on Windows", style.Symbol("create-builder"))
+			// }
 
 			cfg, err := config.NewDefault()
 			if err != nil {

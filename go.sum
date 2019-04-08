@@ -9,8 +9,6 @@ github.com/Microsoft/go-winio v0.4.12 h1:xAfWHN1IrQ0NJ9TBC0KBZoqLjzDTr1ML+4MywiU
 github.com/Microsoft/go-winio v0.4.12/go.mod h1:VhR8bwka0BXejwEJY73c50VrPtXAaKcyvVC4A4RozmA=
 github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 h1:TngWCqHvy9oXAN6lEVMRuU21PR1EtLVZJmdB18Gu3Rw=
 github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5/go.mod h1:lmUJ/7eu/Q8D7ML55dXQrVaamCz2vxCfdQBasLZfHKk=
-github.com/buildpack/lifecycle v0.0.0-20190314183328-a6ea5e18de72 h1:tCYd4NvBTgrb+7VP8vgZmOO4ecK9i/RKAArO2EAJ20I=
-github.com/buildpack/lifecycle v0.0.0-20190314183328-a6ea5e18de72/go.mod h1:35fR8AHcmIc9UHt/XE0Js3UzA260lNqQMhgH4HQ3vPM=
 github.com/buildpack/lifecycle v0.0.0-20190327221653-eecd1c5c1b4c h1:jiEogU54RaQCF9/ZqwHbrrcFJmMFdOu5VQdO3FpLAvE=
 github.com/buildpack/lifecycle v0.0.0-20190327221653-eecd1c5c1b4c/go.mod h1:35fR8AHcmIc9UHt/XE0Js3UzA260lNqQMhgH4HQ3vPM=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
@@ -55,10 +53,9 @@ github.com/golang/protobuf v1.3.0 h1:kbxbvI4Un1LUWKxufD+BiE6AEExYYgkQLQmLFqA1LFk
 github.com/golang/protobuf v1.3.0/go.mod h1:Qd/q+1AKNOZr9uGQzbzCmRO6sUih6GTPZv6a1/R87v0=
 github.com/google/go-cmp v0.2.0 h1:+dTQ8DZQJz0Mb/HjFlkptS1FeQ4cWSnN941F8aEG4SQ=
 github.com/google/go-cmp v0.2.0/go.mod h1:oXzfMopK8JAjlY9xF4vHSVASa0yLyX7SntLO5aqRK0M=
-github.com/google/go-containerregistry v0.0.0-20190110221225-f514e780f7cd h1:u7HssFPC/BNGAttHPr1mcz5lWlqLlvV99SqrulqNhXY=
 github.com/google/go-containerregistry v0.0.0-20190110221225-f514e780f7cd/go.mod h1:yZAFP63pRshzrEYLXLGPmUt0Ay+2zdjmMN1loCnRLUk=
-github.com/google/go-containerregistry v0.0.0-20190306174256-678f6c51f585 h1:8T7m4yMt3E830CvNCcLPeEoygBjHHMMqQGPH7LXQdX0=
-github.com/google/go-containerregistry v0.0.0-20190306174256-678f6c51f585/go.mod h1:yZAFP63pRshzrEYLXLGPmUt0Ay+2zdjmMN1loCnRLUk=
+github.com/google/go-containerregistry v0.0.0-20190401215819-f1df91a4a813 h1:p6kvQYhOQUpogpCn1p/XI/A9UClYVyNTkYkKIijnl7M=
+github.com/google/go-containerregistry v0.0.0-20190401215819-f1df91a4a813/go.mod h1:yZAFP63pRshzrEYLXLGPmUt0Ay+2zdjmMN1loCnRLUk=
 github.com/gorilla/context v1.1.1 h1:AWwleXJkX/nhcU9bZSnZoi3h/qGYqQAGhq6zZe/aQW8=
 github.com/gorilla/context v1.1.1/go.mod h1:kBGZzfjB9CEq2AlWe17Uuf7NDRt0dE0s8S51q0aT7Yg=
 github.com/gorilla/mux v1.6.2 h1:Pgr17XVTNXAk3q/r4CpKzC5xBM/qW1uVLV+IhRZpIIk=
@@ -162,8 +159,8 @@ google.golang.org/appengine v1.4.0/go.mod h1:xpcJRLb0r/rnEns0DIKYYv+WjYCduHsrkT7
 google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8 h1:Nw54tB0rB7hY/N0NQvRW8DG4Yk3Q6T9cu9RcFQDu1tc=
 google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8/go.mod h1:JiN7NxoALGmiZfu7CAH4rXhgtRTLTxftemlI0sWmxmc=
 google.golang.org/genproto v0.0.0-20180831171423-11092d34479b/go.mod h1:JiN7NxoALGmiZfu7CAH4rXhgtRTLTxftemlI0sWmxmc=
-google.golang.org/genproto v0.0.0-20190306222511-6e86cb5d2f12 h1:W8SETuMdLwUlhb1S+hjWLWedszQrLssC1giquyHZXVQ=
-google.golang.org/genproto v0.0.0-20190306222511-6e86cb5d2f12/go.mod h1:VzzqZJRnGkLBvHegQrXjBqPurQTc5/KpmUdxsrq26oE=
+google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107 h1:xtNn7qFlagY2mQNFHMSRPjT2RkOV4OXM7P5TVy9xATo=
+google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107/go.mod h1:VzzqZJRnGkLBvHegQrXjBqPurQTc5/KpmUdxsrq26oE=
 google.golang.org/grpc v1.16.0/go.mod h1:0JHn/cJsOMiMfNA9+DeHDlAU7KAAB5GDlYFpa9MZMio=
 google.golang.org/grpc v1.17.0 h1:TRJYBgMclJvGYn2rIMjj+h9KtMt5r1Ij7ODVRIZkwhk=
 google.golang.org/grpc v1.17.0/go.mod h1:6QZJwpn2B+Zp71q/5VxRsJ6NXXVCE5NRUHRo+f3cWCs=

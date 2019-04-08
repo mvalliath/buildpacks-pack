@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
+
 	"github.com/docker/docker/api/types"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -234,6 +236,110 @@ func (l *local) GetLayer(sha string) (io.ReadCloser, error) {
 
 func (l *local) AddLayer(path string) error {
 	f, err := os.Open(path)
+
+	ctx := context.Background()
+	containerCreateResp, err := l.Docker.ContainerCreate(ctx, &container.Config{
+		Image: l.Inspect.ID,
+		Cmd:   []string{`c:\windows\system32\cmd.exe`, "/c", "ping 127.0.0.1 -n 999 > nul"}, //keep-alive for 1000s for debugging
+	}, &container.HostConfig{
+		AutoRemove: false,
+	}, nil, "")
+	if err != nil {
+		return err
+	}
+
+	containerID := containerCreateResp.ID
+
+	err = l.Docker.CopyToContainer(ctx, containerID, "/", f, types.CopyToContainerOptions{
+		AllowOverwriteDirWithFile: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	commitResp, err := l.Docker.ContainerCommit(ctx, containerID, types.ContainerCommitOptions{})
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("COMMIT RESPONSE %+#v\n", commitResp)
+	imageID := commitResp.ID
+
+	inspect, _, err := l.Docker.ImageInspectWithRaw(ctx, imageID)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("IMAGE: %+#v\n", inspect)
+
+	imageReader, err := l.Docker.ImageSave(ctx, []string{imageID})
+	if err != nil {
+		return err
+	}
+
+	layer, err := tarball.LayerFromReader(imageReader)
+
+	fmt.Printf("LAYER %+#v\n", layer)
+
+	// tarReader := tar.NewReader(imageReader)
+
+	// var tmpFiles = map[string]string{}
+	// var manifestContent []byte
+	// defer func() {
+	// 	for _, tmpFilePath := range tmpFiles {
+	// 		os.Remove(tmpFilePath)
+	// 	}
+	// }()
+
+	// for {
+	// 	header, err := tarReader.Next()
+	// 	if err != nil {
+	// 		return err
+	// 	}
+
+	// 	switch {
+
+	// 	case err == io.EOF:
+	// 		return nil
+
+	// 	case err != nil:
+	// 		return err
+
+	// 	case header == nil:
+	// 		continue
+	// 	}
+
+	// 	switch header.Typeflag {
+
+	// 	// if its a dir and it doesn't exist create it
+	// 	case tar.TypeDir:
+	// 		fmt.Printf("DIR: %s\n", header.Name)
+	// 	// if it's a file create it
+	// 	case tar.TypeReg:
+	// 		fmt.Printf("FILE: %s\n", header.Name)
+
+	// 		if strings.HasSuffix(header.Name, "layer.tar") {
+	// 			tmpFile, err := ioutil.TempFile("", "add-layer-save-image-layer")
+	// 			if err != nil {
+	// 				return err
+	// 			}
+	// 			defer tmpFile.Close()
+
+	// 			io.Copy(tmpFile, tarReader)
+
+	// 			tmpFiles[header.Name] = tmpFile.Name()
+	// 		}
+
+	// 		if header.Name == "manifest.json" {
+	// 			manifestContent, err = ioutil.ReadAll(tarReader)
+	// 			if err != nil {
+	// 				return err
+	// 			}
+	// 			fmt.Printf("MANIFEST %s\n", manifestContent)
+	// 		}
+	// 	}
+	// }
+
 	if err != nil {
 		return errors.Wrapf(err, "AddLayer: open layer: %s", path)
 	}
@@ -297,15 +403,18 @@ func (l *local) Save() (string, error) {
 
 	tw := tar.NewWriter(pw)
 	defer tw.Close()
-
+	fmt.Printf("GRAPH %+v\n", l.Inspect.GraphDriver)
 	imgConfig := map[string]interface{}{
-		"os":      "linux",
-		"created": time.Now().Format(time.RFC3339),
-		"config":  l.Inspect.Config,
+		"os":         l.Inspect.Os,
+		"os.version": l.Inspect.OsVersion,
+		"created":    time.Now().Format(time.RFC3339),
+		"config":     l.Inspect.Config,
 		"rootfs": map[string][]string{
 			"diff_ids": l.Inspect.RootFS.Layers,
 		},
+		// "graph_driver": l.Inspect.GraphDriver,
 	}
+
 	formatted, err := json.Marshal(imgConfig)
 	if err != nil {
 		return "", err
@@ -359,9 +468,14 @@ func (l *local) Save() (string, error) {
 		l.prevMap = nil
 		l.prevOnce = &sync.Once{}
 	}
+
+	fmt.Printf("IMAGEID: %s\n", imgID)
 	if _, _, err = l.Docker.ImageInspectWithRaw(context.Background(), imgID); err != nil && !dockerclient.IsErrNotFound(err) {
+		fmt.Printf("err: %s\n", err.Error())
 		return "", err
 	} else if dockerclient.IsErrNotFound(err) {
+		fmt.Printf("err: %s\n", err.Error())
+
 		return "", fmt.Errorf("save image '%s'", l.RepoName)
 	}
 

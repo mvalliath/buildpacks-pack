@@ -47,7 +47,9 @@ func newV1Image(keychain authn.Keychain, repoName string) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	image, err := v1remote.Image(ref, v1remote.WithAuth(auth))
+	//FIXME
+	platform := v1.Platform{OS: "windows", Architecture: "amd64"}
+	image, err := v1remote.Image(ref, v1remote.WithAuth(auth), v1remote.WithPlatform(platform))
 	if err != nil {
 		return nil, fmt.Errorf("connect to repo store '%s': %s", repoName, err.Error())
 	}

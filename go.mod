@@ -13,7 +13,7 @@ require (
 	github.com/golang/mock v1.2.0
 	github.com/golang/protobuf v1.3.0 // indirect
 	github.com/google/go-cmp v0.2.0
-	github.com/google/go-containerregistry v0.0.0-20190306174256-678f6c51f585
+	github.com/google/go-containerregistry v0.0.0-20190401215819-f1df91a4a813
 	github.com/gorilla/mux v1.7.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
@@ -28,5 +28,5 @@ require (
 	github.com/stretchr/testify v1.3.0 // indirect
 	golang.org/x/crypto v0.0.0-20190228161510-8dd112bcdc25 // indirect
 	golang.org/x/sys v0.0.0-20190306220723-b294cbcfc56d // indirect
-	google.golang.org/genproto v0.0.0-20190306222511-6e86cb5d2f12 // indirect
+	google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107 // indirect
 )
