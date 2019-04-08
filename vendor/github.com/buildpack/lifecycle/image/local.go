@@ -2,9 +2,9 @@ package image
 
 import (
 	"archive/tar"
+	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -236,11 +236,16 @@ func (l *local) GetLayer(sha string) (io.ReadCloser, error) {
 
 func (l *local) AddLayer(path string) error {
 	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
 
+	// Create stopped container based on build-image
 	ctx := context.Background()
 	containerCreateResp, err := l.Docker.ContainerCreate(ctx, &container.Config{
 		Image: l.Inspect.ID,
-		Cmd:   []string{`c:\windows\system32\cmd.exe`, "/c", "ping 127.0.0.1 -n 999 > nul"}, //keep-alive for 1000s for debugging
+		// Labels: "", //TBD
 	}, &container.HostConfig{
 		AutoRemove: false,
 	}, nil, "")
@@ -250,6 +255,7 @@ func (l *local) AddLayer(path string) error {
 
 	containerID := containerCreateResp.ID
 
+	// Copy buildpacks tar layer to root of container FS
 	err = l.Docker.CopyToContainer(ctx, containerID, "/", f, types.CopyToContainerOptions{
 		AllowOverwriteDirWithFile: true,
 	})
@@ -257,98 +263,65 @@ func (l *local) AddLayer(path string) error {
 		return err
 	}
 
+	// Commit container to image
 	commitResp, err := l.Docker.ContainerCommit(ctx, containerID, types.ContainerCommitOptions{})
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("COMMIT RESPONSE %+#v\n", commitResp)
 	imageID := commitResp.ID
 
-	inspect, _, err := l.Docker.ImageInspectWithRaw(ctx, imageID)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("IMAGE: %+#v\n", inspect)
-
+	// Save image to reader
 	imageReader, err := l.Docker.ImageSave(ctx, []string{imageID})
 	if err != nil {
 		return err
 	}
 
-	layer, err := tarball.LayerFromReader(imageReader)
-
-	fmt.Printf("LAYER %+#v\n", layer)
-
-	// tarReader := tar.NewReader(imageReader)
-
-	// var tmpFiles = map[string]string{}
-	// var manifestContent []byte
-	// defer func() {
-	// 	for _, tmpFilePath := range tmpFiles {
-	// 		os.Remove(tmpFilePath)
-	// 	}
-	// }()
-
-	// for {
-	// 	header, err := tarReader.Next()
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	switch {
-
-	// 	case err == io.EOF:
-	// 		return nil
-
-	// 	case err != nil:
-	// 		return err
-
-	// 	case header == nil:
-	// 		continue
-	// 	}
-
-	// 	switch header.Typeflag {
-
-	// 	// if its a dir and it doesn't exist create it
-	// 	case tar.TypeDir:
-	// 		fmt.Printf("DIR: %s\n", header.Name)
-	// 	// if it's a file create it
-	// 	case tar.TypeReg:
-	// 		fmt.Printf("FILE: %s\n", header.Name)
-
-	// 		if strings.HasSuffix(header.Name, "layer.tar") {
-	// 			tmpFile, err := ioutil.TempFile("", "add-layer-save-image-layer")
-	// 			if err != nil {
-	// 				return err
-	// 			}
-	// 			defer tmpFile.Close()
-
-	// 			io.Copy(tmpFile, tarReader)
-
-	// 			tmpFiles[header.Name] = tmpFile.Name()
-	// 		}
-
-	// 		if header.Name == "manifest.json" {
-	// 			manifestContent, err = ioutil.ReadAll(tarReader)
-	// 			if err != nil {
-	// 				return err
-	// 			}
-	// 			fmt.Printf("MANIFEST %s\n", manifestContent)
-	// 		}
-	// 	}
-	// }
-
+	// Read image into memory
+	imageContent, err := ioutil.ReadAll(imageReader)
 	if err != nil {
-		return errors.Wrapf(err, "AddLayer: open layer: %s", path)
+		return err
 	}
-	defer f.Close()
-	hasher := sha256.New()
-	if _, err := io.Copy(hasher, f); err != nil {
-		return errors.Wrapf(err, "AddLayer: calculate checksum: %s", path)
+
+	image, err := tarball.Image(func() (io.ReadCloser, error) {
+		return ioutil.NopCloser(bytes.NewReader(imageContent)), nil
+	}, nil)
+	if err != nil {
+		return err
 	}
-	sha := hex.EncodeToString(hasher.Sum(make([]byte, 0, hasher.Size())))
+
+	// Pick the last layer
+	layers, err := image.Layers()
+	if err != nil {
+		return err
+	}
+
+	lastLayer := layers[len(layers)-1]
+	layerReader, err := lastLayer.Uncompressed()
+	if err != nil {
+		return err
+	}
+
+	// Overwrite layer tarball with new layer content
+	// needed b/c external location for layer tarball
+	writeFile, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC, 0)
+	if err != nil {
+		return err
+	}
+	defer writeFile.Close()
+
+	bytesWritten, err := io.Copy(writeFile, layerReader)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("WROTE %d bytes to %s\n", bytesWritten, path)
+
+	diffID, err := lastLayer.DiffID()
+	if err != nil {
+		return err
+	}
+	sha := diffID.Hex
+	fmt.Printf("SHA256 %s\n", sha)
 
 	l.Inspect.RootFS.Layers = append(l.Inspect.RootFS.Layers, "sha256:"+sha)
 	l.layerPaths = append(l.layerPaths, path)
@@ -396,14 +369,20 @@ func (l *local) Save() (string, error) {
 			return
 		}
 		defer res.Body.Close()
-		io.Copy(ioutil.Discard, res.Body)
-
+		// io.Copy(ioutil.Discard, res.Body)
+		resContent, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			done <- err
+			return
+		}
+		fmt.Printf("IMAGE LOAD %s\n", resContent)
 		done <- nil
 	}()
 
 	tw := tar.NewWriter(pw)
 	defer tw.Close()
 	fmt.Printf("GRAPH %+v\n", l.Inspect.GraphDriver)
+	fmt.Printf("RootFS Layers %+v\n", l.Inspect.RootFS.Layers)
 	imgConfig := map[string]interface{}{
 		"os":         l.Inspect.Os,
 		"os.version": l.Inspect.OsVersion,

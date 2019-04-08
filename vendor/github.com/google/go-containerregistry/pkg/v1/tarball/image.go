@@ -156,7 +156,6 @@ func (i *image) loadTarDescriptorAndConfig() error {
 	if err := json.NewDecoder(td).Decode(&i.td); err != nil {
 		return err
 	}
-
 	i.imgDescriptor, err = i.td.findSpecifiedImageDescriptor(i.tag)
 	if err != nil {
 		return err
