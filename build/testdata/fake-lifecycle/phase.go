@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"syscall"
 
 	"github.com/buildpack/lifecycle/image/auth"
 	"github.com/docker/docker/api/types"
@@ -92,8 +91,7 @@ func testRead(filename string) {
 	}
 	fmt.Println("file contents:", string(contents))
 	info, err := os.Stat(filename)
-	stat := info.Sys().(*syscall.Stat_t)
-	fmt.Printf("file uid/gid %d/%d\n", stat.Uid, stat.Gid)
+	fmt.Printf("file perms %s\n", info.Mode().String())
 }
 
 func testEnv() {
@@ -136,8 +134,8 @@ func readDir(dir string) {
 	}
 	for _, fi := range fis {
 		absPath := filepath.Join(dir, fi.Name())
-		stat := fi.Sys().(*syscall.Stat_t)
-		fmt.Printf("%s %d/%d \n", absPath, stat.Uid, stat.Gid)
+		fmt.Printf("%s %s\n", absPath, fi.Mode().String())
+
 		if fi.IsDir() {
 			readDir(absPath)
 		}

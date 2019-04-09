@@ -36,11 +36,11 @@ func (l *Lifecycle) NewPhase(name string, ops ...func(*Phase) (*Phase, error)) (
 	}
 	hostConf := &container.HostConfig{
 		Binds: []string{
-			fmt.Sprintf("%s:%s:", l.LayersVolume, layersDir),
-			fmt.Sprintf("%s:%s:", l.AppVolume, appDir),
+			fmt.Sprintf("%s:c:%s", l.LayersVolume, layersDir),
+			fmt.Sprintf("%s:c:%s", l.AppVolume, appDir),
 		},
 	}
-	ctrConf.Cmd = []string{"/lifecycle/" + name}
+	ctrConf.Cmd = []string{"c:/lifecycle/" + name}
 	phase := &Phase{
 		ctrConf:  ctrConf,
 		hostConf: hostConf,

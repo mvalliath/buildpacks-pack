@@ -247,7 +247,7 @@ func (l *local) AddLayer(path string) error {
 		Image: l.Inspect.ID,
 		// Labels: "", //TBD
 	}, &container.HostConfig{
-		AutoRemove: false,
+		AutoRemove: true,
 	}, nil, "")
 	if err != nil {
 		return err
@@ -391,7 +391,6 @@ func (l *local) Save() (string, error) {
 		"rootfs": map[string][]string{
 			"diff_ids": l.Inspect.RootFS.Layers,
 		},
-		// "graph_driver": l.Inspect.GraphDriver,
 	}
 
 	formatted, err := json.Marshal(imgConfig)
