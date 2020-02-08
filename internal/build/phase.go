@@ -89,7 +89,7 @@ func WithArgs(args ...string) func(*Phase) (*Phase, error) {
 func WithDaemonAccess() func(*Phase) (*Phase, error) {
 	return func(phase *Phase) (*Phase, error) {
 		phase.ctrConf.User = "root"
-		phase.hostConf.Binds = append(phase.hostConf.Binds, "/var/run/docker.sock:/var/run/docker.sock")
+		phase.hostConf.Binds = append(phase.hostConf.Binds, "/run/user/1000/docker.sock:/var/run/docker.sock")
 		return phase, nil
 	}
 }
