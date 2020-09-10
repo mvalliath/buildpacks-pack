@@ -633,15 +633,6 @@ func RunContainer(ctx context.Context, dockerCli client.CommonAPIClient, id stri
 		return errors.Wrap(err, "container start")
 	}
 
-	info, err := dockerCli.Info(ctx)
-	if err != nil {
-		return errors.Wrap(err, "getting docker info")
-	}
-	if info.OSType == "windows" {
-		// wait for logs to show
-		time.Sleep(time.Second)
-	}
-
 	logs, err := dockerCli.ContainerLogs(ctx, id, dockertypes.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
