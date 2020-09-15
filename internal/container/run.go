@@ -3,13 +3,13 @@ package container
 import (
 	"context"
 	"fmt"
-	"io"
-
 	"github.com/docker/docker/api/types"
 	dcontainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/pkg/errors"
+	"io"
+	"time"
 )
 
 func Run(ctx context.Context, docker client.CommonAPIClient, ctrID string, out, errOut io.Writer) error {
@@ -19,6 +19,9 @@ func Run(ctx context.Context, docker client.CommonAPIClient, ctrID string, out, 
 		return errors.Wrap(err, "container start")
 	}
 
+	//wait for container to start or logs won't
+	time.Sleep(10*time.Millisecond)
+
 	logs, err := docker.ContainerLogs(ctx, ctrID, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
@@ -26,6 +29,9 @@ func Run(ctx context.Context, docker client.CommonAPIClient, ctrID string, out, 
 	})
 	if err != nil {
 		return errors.Wrap(err, "container logs stdout")
+	}
+	if logs != nil {
+		defer logs.Close()
 	}
 
 	copyErr := make(chan error)
@@ -40,7 +46,8 @@ func Run(ctx context.Context, docker client.CommonAPIClient, ctrID string, out, 
 			return fmt.Errorf("failed with status code: %d", body.StatusCode)
 		}
 	case err := <-errChan:
-		return err
+		copyErr <- err
 	}
+
 	return <-copyErr
 }

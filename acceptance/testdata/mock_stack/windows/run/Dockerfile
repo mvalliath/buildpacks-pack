@@ -9,18 +9,14 @@ FROM mcr.microsoft.com/windows/nanoserver:1809
 
 COPY --from=gobuild /util/server.exe /util/server.exe
 
-# placeholder values until correct values are deteremined
-ENV CNB_USER_ID=0
-ENV CNB_GROUP_ID=0
-
-USER ContainerAdministrator
-
-RUN net users /ADD pack /passwordreq:no /expires:never
+# non-zero sets all user-owned directories to BUILTIN\Users
+ENV CNB_USER_ID=1
+ENV CNB_GROUP_ID=1
 
 LABEL io.buildpacks.stack.id=pack.test.stack
 LABEL io.buildpacks.stack.mixins="[\"mixinA\", \"netcat\", \"mixin3\"]"
 
-USER pack
-
 # launcher requires a non-empty PATH to workaround https://github.com/buildpacks/pack/issues/800
 ENV PATH c:\\Windows\\system32;C:\\Windows
+
+USER ContainerUser
