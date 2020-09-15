@@ -201,6 +201,15 @@ lrwxrwxrwx    1 123      456 (.*) fake-app-symlink -> fake-app-file
 				containerPath = `c:\layers-vol\stack.toml`
 			}
 
+			ctrCmd := []string{"ls", "-al", "/layers-vol/stack.toml"}
+			if osType == "windows" {
+				ctrCmd = []string{"cmd", "/c", `dir /q /n c:\layers-vol\stack.toml`}
+			}
+			ctx := context.Background()
+			ctr, err := createContainer(ctx, imageName, containerDir, osType, ctrCmd...)
+			h.AssertNil(t, err)
+			defer cleanupContainer(ctx, ctr.ID)
+
 			writeOp := build.WriteStackToml(containerPath, builder.StackMetadata{
 				RunImage: builder.RunImageMetadata{
 					Image: "image-1",
@@ -210,16 +219,6 @@ lrwxrwxrwx    1 123      456 (.*) fake-app-symlink -> fake-app-file
 					},
 				},
 			}, osType)
-
-			ctrCmd := []string{"ls", "-al", "/layers-vol/stack.toml"}
-			if osType == "windows" {
-				ctrCmd = []string{"cmd", "/c", `dir /q /n c:\layers-vol\stack.toml`}
-			}
-
-			ctx := context.Background()
-			ctr, err := createContainer(ctx, imageName, containerDir, osType, ctrCmd...)
-			h.AssertNil(t, err)
-			defer cleanupContainer(ctx, ctr.ID)
 
 			var outBuf, errBuf bytes.Buffer
 			err = writeOp(ctrClient, ctx, ctr.ID, &outBuf, &errBuf)
@@ -279,6 +278,8 @@ lrwxrwxrwx    1 123      456 (.*) fake-app-symlink -> fake-app-file
 
 	when("#EnsureVolumeAccess", func() {
 		it("changes owner of volume", func() {
+			h.SkipIf(t, osType != "windows", "no-op for linux")
+
 			ctx := context.Background()
 
 			ctrCmd := []string{"ls", "-al", "/my-volume"}
@@ -312,11 +313,7 @@ lrwxrwxrwx    1 123      456 (.*) fake-app-symlink -> fake-app-file
 			err = container.Run(ctx, ctrClient, ctr.ID, &outBuf, &errBuf)
 			h.AssertNil(t, err)
 
-			if osType == "windows" {
-				assertLogsContainMatch(t, &outBuf, &errBuf, `BUILTIN\\Users:\(OI\)\(CI\)\(F\)`)
-			} else {
-				//todo
-			}
+			assertLogsContainMatch(t, &outBuf, &errBuf, `BUILTIN\\Users:\(OI\)\(CI\)\(F\)`)
 		})
 	})
 }

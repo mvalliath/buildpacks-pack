@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"runtime"
+
 	"github.com/BurntSushi/toml"
 	"github.com/docker/docker/api/types"
 	dcontainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
-	"io"
-	"io/ioutil"
-	"os"
-	"runtime"
 
 	"github.com/buildpacks/pack/internal/paths"
 

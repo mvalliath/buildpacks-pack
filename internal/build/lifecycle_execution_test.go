@@ -483,8 +483,9 @@ func testLifecycleExecution(t *testing.T, when spec.G, it spec.S) {
 			configProvider := fakePhaseFactory.NewCalledWithProvider
 			h.AssertSliceContains(t, configProvider.HostConfig().Binds, expectedBind)
 
-			h.AssertEq(t, len(configProvider.ContainerOps()), 1)
-			h.AssertFunctionName(t, configProvider.ContainerOps()[0], "CopyDir")
+			h.AssertEq(t, len(configProvider.ContainerOps()), 2)
+			h.AssertFunctionName(t, configProvider.ContainerOps()[0], "EnsureVolumeAccess")
+			h.AssertFunctionName(t, configProvider.ContainerOps()[1], "CopyDir")
 		})
 	})
 
